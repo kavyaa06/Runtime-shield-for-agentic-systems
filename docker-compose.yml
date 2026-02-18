@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  keycloak:
+    container_name: keycloak_mcp
+    image: quay.io/keycloak/keycloak:latest
+    command: start-dev
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: kavss
+    ports:
+      - "8080:8080"
+    volumes:
+      # This saves your database to a folder named 'keycloak_data' next to this file
+      - ./keycloak_data:/opt/keycloak/data
