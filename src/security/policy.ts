@@ -1,20 +1,24 @@
-import { UserContext } from "./types.js";
+import { UserContext } from "./types";
 
 export class PolicyEngine {
     constructor() { }
 
     async evaluate(toolName: string, args: any, context: UserContext): Promise<boolean> {
-        // Default Policy: Allow All for now (until configured)
-        // Ideally: Fetch rules from Keycloak or config file
+        // --- IDENTITY-CENTRIC POLICY RULES ---
 
-        // Example: Only admins can use "delete_file"
-        if (toolName === "delete_file" && !context.roles.includes("admin")) {
-            return false;
+        // Rule 1: High Risk Tools (Write) -> ADMIN ONLY
+        const highRiskTools = ["write_file_vulnerable", "keycloak_revoke_user_sessions"];
+        if (highRiskTools.includes(toolName)) {
+            if (!context.roles.includes("admin")) {
+                // VIOLATION: User is not admin
+                return false;
+            }
         }
 
-        // Example: Only support can use "read_logs"
-        if (toolName === "read_logs" && !context.roles.includes("support")) {
-            return false;
+        // Rule 2: Medium Risk (List Directory) -> Authenticated Users Only (Simplified)
+        if (toolName === "list_directory_vulnerable") {
+            // Allow for now, since we have Path Canonicalization as a second layer
+            // But maybe restrict root listing?
         }
 
         return true;

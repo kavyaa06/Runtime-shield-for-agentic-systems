@@ -7,6 +7,13 @@ import { UserContext } from "../security/types";
 import fs from "fs/promises";
 import path from "path";
 
+// Helper to get absolute path to workspace root
+// Since we are compiling to CJS (no "type": "module"), __dirname works natively
+// Structure: dist/tools/tools.js -> dist/tools -> dist -> root
+// So we need to go up 2 levels
+const PROJECT_ROOT = path.resolve(__dirname, "../../");
+console.error(`[DEBUG] Resolved PROJECT_ROOT: ${PROJECT_ROOT}`);
+
 export function registerTools(server: McpServer) {
     const shield = new RuntimeShield();
 
@@ -15,11 +22,15 @@ export function registerTools(server: McpServer) {
         server.tool(toolName, schema, async (args: any) => {
             // Context Logic: In a real app, this comes from an Auth Token.
             // For this demo (stdio), we derive it from args/environment or assume a default "Session".
+
+            // FIX: Use Absolute Path for Sandbox
+            const sandboxRoot = path.resolve(PROJECT_ROOT, "sandbox");
+
             const context: UserContext = {
                 userId: args.userId || "unknown-id",
                 username: args.username || "guest",
                 roles: args.username === "admin" ? ["admin", "user"] : ["user"], // Mock Role derivation
-                homeDir: path.resolve(process.cwd(), "sandbox", args.username || "guest"),
+                homeDir: path.resolve(sandboxRoot, args.username || "guest"),
                 ipAddress: args.simulateIp || "127.0.0.1"
             };
 
@@ -124,20 +135,70 @@ export function registerTools(server: McpServer) {
     // --- THE VULNERABLE TOOL (DEMO) ---
     // This tool mimics the "Directory Traversal" vulnerability.
     // It blindly reads whatever path is passed to it.
+    // --- THE VULNERABLE TOOL (DEMO) ---
+    // This tool mimics the "Directory Traversal" vulnerability.
+    // It blindly reads whatever path is passed to it.
     withShield(
         "read_file_vulnerable",
         {
-            path: z.string().describe("The file path to read"),
+            path: z.string().describe("The file path to read (Relative to workspace)"),
             username: z.string().describe("The user requesting access (for context)"),
         },
         async ({ path: filePath }: any) => {
-            // VULNERABLE LOGIC: No checks! 
-            // "I just work here, let me read the file."
-            const content = await fs.readFile(filePath, "utf-8");
+            // VULNERABLE LOGIC: Naive path joining
+            // Python equivalent: full_path = os.path.join(workspace_dir, relative_path)
+
+            // FIX: Use PROJECT_ROOT instead of process.cwd()
+            const fullPath = path.resolve(PROJECT_ROOT, filePath);
+
+            // INTENTIONAL VULNERABILITY: No check if fullPath startsWith(workspace)
+            const content = await fs.readFile(fullPath, "utf-8");
             return {
                 content: [{ type: "text", text: content }]
             };
         }
     );
-}
 
+    // VULNERABILITY: write_file (Path Traversal)
+    withShield(
+        "write_file_vulnerable",
+        {
+            path: z.string().describe("The file path to write"),
+            content: z.string().describe("Content to write"),
+            username: z.string().describe("The user requesting access"),
+        },
+        async ({ path: filePath, content }: any) => {
+            // FIX: Use PROJECT_ROOT instead of process.cwd()
+            const fullPath = path.resolve(PROJECT_ROOT, filePath);
+
+            // INTENTIONAL VULNERABILITY: No scope check
+            await fs.mkdir(path.dirname(fullPath), { recursive: true });
+            await fs.writeFile(fullPath, content, "utf-8");
+
+            return {
+                content: [{ type: "text", text: `Successfully wrote to ${filePath}` }]
+            };
+        }
+    );
+
+    // VULNERABILITY: list_directory (Path Traversal)
+    withShield(
+        "list_directory_vulnerable",
+        {
+            path: z.string().optional().default(".").describe("Directory to list"),
+            username: z.string().describe("The user requesting access"),
+        },
+        async ({ path: dirPath }: any) => {
+            // FIX: Use PROJECT_ROOT instead of process.cwd()
+            const fullPath = path.resolve(PROJECT_ROOT, dirPath);
+
+            // INTENTIONAL VULNERABILITY: No scope check
+            const files = await fs.readdir(fullPath, { withFileTypes: true });
+            const output = files.map(f => f.isDirectory() ? `📁 ${f.name}/` : `📄 ${f.name}`).join("\n");
+
+            return {
+                content: [{ type: "text", text: `Contents of ${dirPath}:\n\n${output}` }]
+            };
+        }
+    );
+}
