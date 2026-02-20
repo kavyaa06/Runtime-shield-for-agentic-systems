@@ -17,17 +17,8 @@ class ShieldService {
         const sessions = await kc.users.listSessions({
             id: userId,
         });
-        // NOTE: If no sessions are found, it might be a login attempt or a script. 
-        // For strict session replay, we might block. For now, we allow if no sessions exist 
-        // (assuming it's a new login or stateless interaction), OR we can block.
-        // The original logic blocked if no active session was found, which is safer for this demo.
         if (!sessions || sessions.length === 0) {
             console.warn(`⚠️ [Shield] No active sessions found for user ${userId}. Proceeding with caution (or blocking based on policy).`);
-            // Returning true here to avoid blocking valid "first-time" checks if the logic allows.
-            // BUT, strictly for Replay Detection, if we expect a session, we should fail.
-            // Let's keep the original "Block if no session" logic if that was the intent, 
-            // but 'verify_shield' showed we need to be careful about Service Account sessions.
-            // For now, let's Stick to the IP check if sessions exist.
         }
         const outputParams = {
             validSessionFound: false,
