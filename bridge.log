@@ -7077,3 +7077,15 @@
 [11:50:28] 🚫 Blocked: Security violation: Potential directory traversal detected.
 [11:51:01] 🔍 Checking tool call: read_file
 [11:51:01] 🚫 Blocked: Security violation: Potential directory traversal detected.
+
+--- Secure Bridge Session Start: 2026-02-24 11:58:14 ---
+[11:58:14] Starting Secure Bridge. Python: C:\Python313\python.exe
+[11:58:14] ✅ Security Gateway initialized
+[11:58:14] 📊 Dashboard active at http://127.0.0.1:9090
+[11:58:14] 🚀 Launching Vulnerable Server: C:\Python313\python.exe c:\Users\kavya\OneDrive\Desktop\agentic AI\vulnerable-mcp-servers-lab\vulnerable-mcp-server-filesystem-workspace-actions\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py c:\Users\kavya\OneDrive\Desktop\keycloak-mcp-server\sandbox
+[11:58:14] ⌛ Bridge active and relaying...
+[11:58:34] 🔍 Checking tool call: list_directory
+[11:58:34] 🚫 Blocked: Access denied: The 'admin/' directory is off-limits.
+[11:58:59] 🔍 Checking tool call: read_file
+[11:58:59] ✂️  FIREWALL REDACTED: Found sensitive data
+[11:58:59]   - Finding: Secrets detected and handled: Bearer Token (high)
