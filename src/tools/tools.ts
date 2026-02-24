@@ -3,12 +3,6 @@ import { z } from "zod";
 import { getKcClient } from "../utils/keycloak";
 import path from "path";
 
-/**
- * CLEAN BASELINE: Keycloak Admin Tools
- * This file contains ONLY the core Keycloak management tools.
- * All security logic has been moved to the external Python mcp_gateway.
- */
-
 export function registerTools(server: McpServer) {
 
     // Helper to resolve ID from username

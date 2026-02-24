@@ -1,0 +1,47 @@
+# mcp-firewall Policy Configuration
+# This file defines the security guardrails for the keycloak-mcp-server
+
+# Global Configuration
+global:
+  dashboard_port: 9090
+  audit_log: audit.log
+  fail_open: false  # Deny if policy evaluation fails
+secrets:
+  enabled: true
+  action: redact
+
+# Agent Identities & RBAC
+# (Leave empty to let global rules handle permissions)
+agents: {}
+
+# General Rules (evaluated in order: FIRST MATCH WINS)
+rules:
+  # 1. Block directory traversal patterns
+  - name: block-directory-traversal
+    match:
+      tool:
+        name: "read_file|list_directory|write_file|execute_code"
+        arguments:
+          path: { regex: "(\\.\\.\\/|\\.\\.\\\\|\\/etc|C:\\\\Windows|\\/proc|\\$)" }
+    action: deny
+    message: "Security violation: Potential directory traversal detected."
+
+  # 2. Multi-Tenancy Enforcement (Blocks illegal paths even if tools are allowed)
+  - name: enforce-multi-tenancy
+    match:
+      tool:
+        name: "read_file|list_directory|write_file"
+        arguments:
+          path: { regex: "^(?!claude-desktop/).*" } 
+    action: deny
+    message: "Access denied: You can only access files within your folder (claude-desktop/)."
+
+  # 3. Allow authorized tools ONLY if they passed the security checks above
+  - name: allow-authorized-tools
+    tool: "read_file|list_directory|write_file|keycloak_*"
+    action: allow
+
+# Threat Feed Integration
+threat_feed:
+  enabled: true
+  update_interval: 24h

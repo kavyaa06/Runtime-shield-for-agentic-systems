@@ -3,11 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerTools = registerTools;
 const zod_1 = require("zod");
 const keycloak_1 = require("../utils/keycloak");
-/**
- * CLEAN BASELINE: Keycloak Admin Tools
- * This file contains ONLY the core Keycloak management tools.
- * All security logic has been moved to the external Python mcp_gateway.
- */
 function registerTools(server) {
     // Helper to resolve ID from username
     const resolveUserId = async (kc, userId, username) => {
