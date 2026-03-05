@@ -7089,3 +7089,202 @@
 [11:58:59] 🔍 Checking tool call: read_file
 [11:58:59] ✂️  FIREWALL REDACTED: Found sensitive data
 [11:58:59]   - Finding: Secrets detected and handled: Bearer Token (high)
+
+--- Secure Bridge Session Start: 2026-02-24 12:21:41 ---
+[12:21:41] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[12:21:41] ✅ Security Gateway initialized
+[12:21:41] 📊 Dashboard active at http://127.0.0.1:9090
+[12:21:41] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe c:\Users\kavya\OneDrive\Desktop\agentic AI\vulnerable-mcp-servers-lab\vulnerable-mcp-server-filesystem-workspace-actions\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[12:21:41] ⌛ Bridge active and relaying...
+[12:21:41] 🏁 Server exited with code 2
+
+--- Secure Bridge Session Start: 2026-02-24 12:32:38 ---
+[12:32:38] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[12:32:38] ✅ Security Gateway initialized
+[12:32:38] 📊 Dashboard active at http://127.0.0.1:9090
+[12:32:38] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[12:32:38] ⌛ Bridge active and relaying...
+
+--- Secure Bridge Session Start: 2026-02-24 15:49:24 ---
+[15:49:24] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[15:49:24] ✅ Security Gateway initialized
+[15:49:24] 📊 Dashboard active at http://127.0.0.1:9090
+[15:49:24] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[15:49:24] ⌛ Bridge active and relaying...
+
+--- Secure Bridge Session Start: 2026-02-24 15:51:43 ---
+[15:51:43] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[15:51:43] ✅ Security Gateway initialized
+[15:51:43] 📊 Dashboard active at http://127.0.0.1:9090
+[15:51:43] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[15:51:43] ⌛ Bridge active and relaying...
+
+--- Secure Bridge Session Start: 2026-02-24 15:55:13 ---
+[15:55:13] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[15:55:13] ✅ Security Gateway initialized
+[15:55:13] 📊 Dashboard active at http://127.0.0.1:9090
+[15:55:13] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[15:55:14] ⌛ Bridge active and relaying...
+
+--- Secure Bridge Session Start: 2026-02-24 16:06:20 ---
+[16:06:20] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[16:06:20] ✅ Security Gateway initialized
+[16:06:20] 📊 Dashboard active at http://127.0.0.1:9090
+[16:06:20] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[16:06:20] ⌛ Bridge active and relaying...
+
+--- Secure Bridge Session Start: 2026-02-24 16:08:54 ---
+[16:08:54] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[16:08:54] ✅ Security Gateway initialized
+[16:08:54] 📊 Dashboard active at http://127.0.0.1:9090
+[16:08:54] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[16:08:54] ⌛ Bridge active and relaying...
+
+--- Secure Bridge Session Start: 2026-02-24 16:15:22 ---
+[16:15:22] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[16:15:22] ✅ Security Gateway initialized
+[16:15:22] 📊 Dashboard active at http://127.0.0.1:9090
+[16:15:22] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[16:15:23] ⌛ Bridge active and relaying...
+
+--- Secure Bridge Session Start: 2026-02-25 11:40:50 ---
+[11:40:50] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[11:40:50] ✅ Security Gateway initialized
+[11:40:50] 📊 Dashboard active at http://127.0.0.1:9090
+[11:40:50] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[11:40:50] ⌛ Bridge active and relaying...
+[11:44:34] 🔍 Checking tool call: list_directory
+[11:44:45] 🔍 Checking tool call: list_directory
+
+--- Secure Bridge Session Start: 2026-02-25 11:52:59 ---
+[11:52:59] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[11:52:59] ✅ Security Gateway initialized
+[11:52:59] 📊 Dashboard active at http://127.0.0.1:9090
+[11:52:59] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[11:52:59] ⌛ Bridge active and relaying...
+[11:53:29] 🔍 Checking tool call: list_directory
+
+--- Secure Bridge Session Start: 2026-02-25 12:04:47 ---
+[12:04:47] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[12:04:47] ✅ Security Gateway initialized
+[12:04:47] 📊 Dashboard active at http://127.0.0.1:9090
+[12:04:47] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[12:04:47] ⌛ Bridge active and relaying...
+
+--- Secure Bridge Session Start: 2026-02-25 16:07:30 ---
+[16:07:30] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[16:07:30] ✅ Security Gateway initialized
+[16:07:30] 📊 Dashboard active at http://127.0.0.1:9090
+[16:07:30] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[16:07:30] ⌛ Bridge active and relaying...
+
+--- Secure Bridge Session Start: 2026-02-25 16:09:54 ---
+[16:09:54] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[16:09:54] ✅ Security Gateway initialized
+[16:09:54] 📊 Dashboard active at http://127.0.0.1:9090
+[16:09:54] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[16:09:54] ⌛ Bridge active and relaying...
+[16:10:36] 🔍 Checking tool call: list_directory
+[16:10:50] 🔍 Checking tool call: list_directory
+[16:11:05] 🔍 Checking tool call: list_directory
+
+--- Secure Bridge Session Start: 2026-02-25 16:15:35 ---
+[16:15:35] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[16:15:35] ✅ Security Gateway initialized
+[16:15:35] 📊 Dashboard active at http://127.0.0.1:9090
+[16:15:35] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[16:15:35] ⌛ Bridge active and relaying...
+
+--- Secure Bridge Session Start: 2026-02-25 16:16:37 ---
+[16:16:38] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[16:16:38] ✅ Security Gateway initialized
+[16:16:38] 📊 Dashboard active at http://127.0.0.1:9090
+[16:16:38] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[16:16:38] ⌛ Bridge active and relaying...
+[16:17:12] 🔍 Checking tool call: list_directory
+[16:17:18] 🔍 Checking tool call: list_directory
+
+--- Secure Bridge Session Start: 2026-02-25 16:20:30 ---
+[16:20:30] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[16:20:30] ✅ Security Gateway initialized
+[16:20:30] 📊 Dashboard active at http://127.0.0.1:9090
+[16:20:30] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[16:20:30] ⌛ Bridge active and relaying...
+[16:21:13] 🔍 Checking tool call: list_directory
+[16:21:24] 🔍 Checking tool call: list_directory
+[16:23:48] 🔍 Checking tool call: list_directory
+[16:25:51] 🔍 Checking tool call: read_file
+[16:25:51] ✂️ FIREWALL REDACTED sensitive data
+
+--- Secure Bridge Session Start: 2026-02-26 11:07:19 ---
+[11:07:19] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[11:07:19] ✅ Security Gateway initialized
+[11:07:19] 📊 Dashboard active at http://127.0.0.1:9090
+[11:07:19] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[11:07:19] ⌛ Bridge active and relaying...
+
+--- Secure Bridge Session Start: 2026-02-26 11:09:41 ---
+[11:09:41] Starting Secure Bridge. Python: C:\Users\Lenovo\AppData\Local\Programs\Python\Python313\python.exe
+[11:09:41] ✅ Security Gateway initialized
+[11:09:41] 📊 Dashboard active at http://127.0.0.1:9090
+[11:09:41] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\AppData\Local\Programs\Python\Python313\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[11:09:41] ⌛ Bridge active and relaying...
+[11:10:09] 🔍 Checking tool call: list_directory
+[11:10:14] 🔍 Checking tool call: list_directory
+[11:10:18] 🔍 Checking tool call: list_directory
+[11:10:23] 🔍 Checking tool call: list_directory
+[11:10:58] 🔍 Checking tool call: read_file
+[11:10:58] ✂️ FIREWALL REDACTED sensitive data
+
+--- Secure Bridge Session Start: 2026-03-01 14:21:42 ---
+[14:21:42] Starting Secure Bridge. Python: C:\Users\Lenovo\AppData\Local\Programs\Python\Python313\python.exe
+[14:21:42] ✅ Security Gateway initialized
+[14:21:42] 📊 Dashboard active at http://127.0.0.1:9090
+[14:21:42] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\AppData\Local\Programs\Python\Python313\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[14:21:42] ⌛ Bridge active and relaying...
+
+--- Secure Bridge Session Start: 2026-03-01 14:22:17 ---
+[14:22:17] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[14:22:17] ✅ Security Gateway initialized
+[14:22:17] 📊 Dashboard active at http://127.0.0.1:9090
+[14:22:17] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[14:22:17] ⌛ Bridge active and relaying...
+[14:22:39] 🔍 Checking tool call: list_directory
+[14:22:43] 🔍 Checking tool call: list_directory
+[14:22:48] 🔍 Checking tool call: list_directory
+[14:31:58] 🔍 Checking tool call: list_directory
+[14:32:05] 🔍 Checking tool call: list_directory
+[14:32:09] 🔍 Checking tool call: list_directory
+[14:32:14] 🔍 Checking tool call: list_directory
+[14:34:33] 🔍 Checking tool call: read_file
+[14:34:33] ✂️ FIREWALL REDACTED sensitive data
+[14:38:26] 🔍 Checking tool call: list_directory
+[14:39:06] 🔍 Checking tool call: list_directory
+
+--- Secure Bridge Session Start: 2026-03-01 14:40:24 ---
+[14:40:24] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[14:40:24] ✅ Security Gateway initialized
+[14:40:24] 📊 Dashboard active at http://127.0.0.1:9090
+[14:40:24] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[14:40:24] ⌛ Bridge active and relaying...
+
+--- Secure Bridge Session Start: 2026-03-01 15:19:38 ---
+[15:19:38] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[15:19:38] ✅ Security Gateway initialized
+[15:19:38] 📊 Dashboard active at http://127.0.0.1:9090
+[15:19:38] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[15:19:38] ⌛ Bridge active and relaying...
+[15:24:24] 🔍 Checking tool call: list_directory
+[15:24:29] 🔍 Checking tool call: list_directory
+[15:24:35] 🔍 Checking tool call: list_directory
+[15:25:23] 🔍 Checking tool call: read_file
+[15:25:29] 🔍 Checking tool call: read_file
+[15:26:20] 🔍 Checking tool call: read_file
+[15:26:20] ✂️ FIREWALL REDACTED sensitive data
+
+--- Secure Bridge Session Start: 2026-03-05 11:07:48 ---
+[11:07:48] Starting Secure Bridge. Python: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe
+[11:07:48] ✅ Security Gateway initialized
+[11:07:48] 📊 Dashboard active at http://127.0.0.1:9090
+[11:07:48] 🚀 Launching Vulnerable Server: C:\Users\Lenovo\Runtime-shield-for-agentic-systems\venv\Scripts\python.exe C:\Users\Lenovo\Downloads\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py C:\Users\Lenovo\Runtime-shield-for-agentic-systems\sandbox
+[11:07:48] ⌛ Bridge active and relaying...
