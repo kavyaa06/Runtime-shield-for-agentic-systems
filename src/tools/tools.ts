@@ -1,75 +1,214 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getKcClient } from "../utils/keycloak";
-import path from "path";
 
-export function registerTools(server: McpServer) {
+/* -----------------------------
+   Resolve userId
+----------------------------- */
+async function resolveUserId(kc: any, userId?: string, username?: string) {
+  if (userId) return userId;
 
-    // Helper to resolve ID from username
-    const resolveUserId = async (kc: any, userId?: string, username?: string): Promise<string> => {
-        if (userId) return userId;
-        if (username) {
-            const users = await kc.users.find({ username: username, exact: true });
-            if (users.length > 0 && users[0].id) {
-                return users[0].id;
+  if (!username) {
+    throw new Error("Provide either userId or username");
+  }
+
+  const users = await kc.users.find({
+    search: username,
+    max: 20
+  });
+
+  const user = users.find(
+    (u: any) => (u.username || "").toLowerCase() === username.toLowerCase()
+  );
+
+  if (!user) {
+    throw new Error(`User '${username}' not found`);
+  }
+
+  return user.id;
+}
+
+/* -----------------------------
+   Register tools
+----------------------------- */
+export function registerTools(server: any) {
+
+  /* -----------------------------
+     LIST USER SESSIONS (WORKING)
+  ----------------------------- */
+  server.tool(
+    "keycloak_list_user_sessions",
+    {
+      username: z.string().optional(),
+      userId: z.string().optional()
+    },
+
+    async (params: any) => {
+
+      try {
+        console.log("🔍 LIST SESSIONS CALLED");
+
+        const kc = await getKcClient();
+
+        const targetId = await resolveUserId(
+          kc,
+          params.userId,
+          params.username
+        );
+
+        const sessions = await kc.users.listSessions({
+          id: targetId
+        });
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(sessions || [], null, 2)
             }
-            throw new Error(`User '${username}' not found.`);
+          ]
+        };
+
+      } catch (err: any) {
+
+        console.error("SESSION ERROR:", err);
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Session error: ${err.message}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+
+  /* -----------------------------
+     REVOKE USER SESSIONS (FIXED)
+     ADMIN ONLY
+  ----------------------------- */
+  server.tool(
+    "keycloak_revoke_user_sessions",
+    {
+      username: z.string().optional(),
+      userId: z.string().optional()
+    },
+
+    async (params: any) => {
+
+      try {
+        console.log("🔍 REVOKE CALLED");
+
+        /* 🔐 RBAC */
+        const role = process.env.RUNTIME_ROLE || "analyst";
+
+        if (role !== "admin") {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "❌ Only admin can revoke sessions"
+              }
+            ]
+          };
         }
-        throw new Error("You must provide either 'userId' or 'username'.");
-    };
 
-    // Tool 1: Get User Events
-    server.tool(
-        "keycloak_get_user_events",
-        {
-            userId: z.string().optional().describe("Filter by specific User ID"),
-            username: z.string().optional().describe("Filter by Username"),
-            limit: z.number().optional().default(50).describe("Number of events to fetch"),
-        },
-        async ({ userId, username, limit }: any) => {
-            const kc = await getKcClient();
-            const targetId = (userId || username) ? await resolveUserId(kc, userId, username) : undefined;
-            const realm = process.env.KEYCLOAK_REALM || "master";
-            const events = await kc.realms.findEvents({ realm, user: targetId, max: limit });
+        const kc = await getKcClient();
 
-            const simplifiedEvents = events.map((e: any) => ({
-                time: new Date(e.time || 0).toISOString(),
-                type: e.type,
-                ipAddress: e.ipAddress,
-                userId: e.userId,
-            }));
+        const targetId = await resolveUserId(
+          kc,
+          params.userId,
+          params.username
+        );
 
-            return { content: [{ type: "text", text: JSON.stringify(simplifiedEvents, null, 2) }] };
-        }
-    );
+        /* ✅ DIRECT SDK CALL (NO HANG) */
+        await kc.users.logout({
+          id: targetId
+        });
 
-    // Tool 2: List User Sessions
-    server.tool(
-        "keycloak_list_user_sessions",
-        {
-            userId: z.string().optional(),
-            username: z.string().optional(),
-        },
-        async ({ userId, username }: any) => {
-            const kc = await getKcClient();
-            const targetId = await resolveUserId(kc, userId, username);
-            const sessions = await kc.users.listSessions({ id: targetId });
-            return { content: [{ type: "text", text: JSON.stringify(sessions, null, 2) }] };
-        }
-    );
+        return {
+          content: [
+            {
+              type: "text",
+              text: `✅ Sessions revoked for ${params.username || targetId}`
+            }
+          ]
+        };
 
-    // Tool 3: Revoke User Sessions
-    server.tool(
-        "keycloak_revoke_user_sessions",
-        {
-            userId: z.string().optional(),
-            username: z.string().optional(),
-        },
-        async ({ userId, username }: any) => {
-            const kc = await getKcClient();
-            const targetId = await resolveUserId(kc, userId, username);
-            await kc.users.logout({ id: targetId });
-            return { content: [{ type: "text", text: `Revoked sessions for ${targetId}` }] };
-        }
-    );
+      } catch (err: any) {
+
+        console.error("REVOKE ERROR:", err);
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `❌ Revoke failed: ${err.message}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+
+  /* -----------------------------
+     GET USER EVENTS (WORKING)
+  ----------------------------- */
+  server.tool(
+    "keycloak_get_user_events",
+    {
+      username: z.string().optional(),
+      userId: z.string().optional(),
+      limit: z.number().optional().default(20)
+    },
+
+    async (params: any) => {
+
+      try {
+        console.log("🔍 EVENTS CALLED");
+
+        const kc = await getKcClient();
+
+        const targetId = await resolveUserId(
+          kc,
+          params.userId,
+          params.username
+        );
+
+        const realm = process.env.KEYCLOAK_REALM || "runtime-shield";
+
+        const events = await kc.realms.findEvents({
+          realm,
+          user: targetId,
+          max: params.limit
+        });
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(events || [], null, 2)
+            }
+          ]
+        };
+
+      } catch (err: any) {
+
+        console.error("EVENT ERROR:", err);
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Event error: ${err.message}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
 }
