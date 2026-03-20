@@ -222,3 +222,7 @@ select t.REMEMBER_ME from PUBLIC.OFFLINE_USER_SESSION t where 0=1 [42122-230]
 	at org.keycloak.quarkus.runtime.KeycloakMain.main(KeycloakMain.java:79)
 	at io.quarkus.bootstrap.runner.QuarkusEntryPoint.doRun(QuarkusEntryPoint.java:69)
 	at io.quarkus.bootstrap.runner.QuarkusEntryPoint.main(QuarkusEntryPoint.java:37)
+2026-03-08 11:13:13.266623Z jdbc[3]: exception
+org.h2.jdbc.JdbcSQLNonTransientException: The object is already closed [90007-230]
+2026-03-08 11:13:13.292314Z jdbc[3]: exception
+org.h2.jdbc.JdbcSQLNonTransientException: The object is already closed [90007-230]

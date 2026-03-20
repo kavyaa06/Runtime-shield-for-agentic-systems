@@ -1,4 +1,5 @@
 services:
+
   keycloak:
     container_name: keycloak_mcp
     image: quay.io/keycloak/keycloak:26.5.3
@@ -10,4 +11,39 @@ services:
       - "8080:8080"
     volumes:
       - ./keycloak_data:/opt/keycloak/data
-      - C:/Users/Lenovo/Desktop/keycloakify-starter/dist_keycloak/keycloak-theme-for-kc-26.2-and-above.jar:/opt/keycloak/providers/keycloakify.jar
+    restart: always
+
+
+  spire-server:
+    container_name: spire-server
+    image: ghcr.io/spiffe/spire-server:1.8.0
+    command:
+      - "-config"
+      - "/run/spire/config/server.conf"
+    volumes:
+      - ./spire/server:/run/spire/config
+      - spire-server-data:/opt/spire/data
+    ports:
+      - "8081:8081"
+    restart: always
+
+
+  spire-agent:
+    container_name: spire-agent
+    image: ghcr.io/spiffe/spire-agent:1.8.0
+    command:
+      - "-config"
+      - "/run/spire/config/agent.conf"
+
+
+    volumes:
+      - ./spire/agent:/run/spire/config
+      - spire-agent-data:/opt/spire/data
+    depends_on:
+      - spire-server
+    restart: always
+
+
+volumes:
+  spire-server-data:
+  spire-agent-data:
