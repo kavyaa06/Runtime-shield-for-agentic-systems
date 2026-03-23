@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "keycloak-server": {
+      "command": "C:\\Python313\\python.exe",
+      "args": [
+        "c:\\Users\\kavya\\OneDrive\\Desktop\\keycloak-mcp-server\\bridge.py"
+      ],
+      "env": {
+        "PYTHONUTF8": "1"
+      }
+    }
+  },
+  "preferences": {
+    "coworkScheduledTasksEnabled": false,
+    "sidebarMode": "chat",
+    "coworkWebSearchEnabled": true
+  }
+}

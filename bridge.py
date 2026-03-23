@@ -16,6 +16,54 @@ PROJECT_DIR = r"c:\Users\kavya\OneDrive\Desktop\keycloak-mcp-server"
 CONFIG_PATH = os.path.join(PROJECT_DIR, "mcp-firewall.yaml")
 DOTENV_PATH = os.path.join(PROJECT_DIR, ".env")
 LOG_PATH = os.path.join(PROJECT_DIR, "bridge.log")
+DISCOVERY_PATH = os.path.join(PROJECT_DIR, "discovery.log")
+
+class FraudDetectionEngine:
+    def __init__(self):
+        self.agent_risk_scores = {}
+        self.user_risk_scores = {} # Identity-aware risk tracking
+        self.RISK_THRESHOLD = 50
+
+    def analyze(self, agent: str, decision, user_id: str = None) -> tuple[bool, str, str, str]:
+        action_val = decision.action.value if hasattr(decision.action, 'value') else str(decision.action)
+
+        if agent not in self.agent_risk_scores:
+            self.agent_risk_scores[agent] = 0
+        
+        if user_id and user_id not in self.user_risk_scores:
+            self.user_risk_scores[user_id] = 0
+            
+        # Increase risk score based on static firewall triggers
+        risk_increase = 0
+        if action_val == "deny":
+            risk_increase = 25
+        elif action_val == "redact":
+            risk_increase = 15
+            
+        self.agent_risk_scores[agent] += risk_increase
+        if user_id:
+            self.user_risk_scores[user_id] += risk_increase
+            
+        current_score = self.agent_risk_scores[agent]
+        if user_id:
+            current_score = max(current_score, self.user_risk_scores[user_id])
+        
+        # Determine if dynamic threshold is crossed
+        if current_score >= self.RISK_THRESHOLD:
+            return True, "deny", f"Fraud Engine Block: Risk Score ({current_score}) exceeded threshold ({self.RISK_THRESHOLD}).", "critical"
+            
+        return False, action_val, decision.reason, decision.severity.value if hasattr(decision.severity, 'value') else str(decision.severity)
+
+def log_discovery(tool, args, agent):
+    with open(DISCOVERY_PATH, "a", encoding="utf-8") as f:
+        entry = {
+            "timestamp": time.time(),
+            "tool": tool,
+            "args": args,
+            "agent": agent,
+            "proposed_rule": f"- name: auto-rule-{int(time.time())}\n  tool: \"{tool}\"\n  action: allow"
+        }
+        f.write(json.dumps(entry) + "\n")
 
 def log(msg):
     with open(LOG_PATH, "a", encoding="utf-8") as f:
@@ -35,10 +83,11 @@ MCPWN_EXE = os.path.join(SCRIPTS_DIR, "mcpwn.exe")
 def main():
     parser = argparse.ArgumentParser(description="MCP Security Bridge & Scanner")
     parser.add_argument("--scan", action="store_true", help="Only run the security scan")
+    parser.add_argument("--learning", action="store_true", help="Enable Learning Mode (log unknown tools instead of blocking)")
     args = parser.parse_args()
 
     # Path to the vulnerable Python MCP server
-    VULNERABLE_SERVER_PATH = r"c:\Users\kavya\OneDrive\Desktop\agentic AI\vulnerable-mcp-servers-lab\vulnerable-mcp-server-filesystem-workspace-actions\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py"
+    VULNERABLE_SERVER_PATH = r"c:\Users\kavya\OneDrive\Desktop\keycloak-mcp-server\vulnerable-mcp-server-filesystem-workspace-actions-mcp.py"
     WORKSPACE_DIR = os.path.join(PROJECT_DIR, "sandbox")
     
     if not os.path.exists(WORKSPACE_DIR):
@@ -73,6 +122,10 @@ def main():
     except Exception as e:
         log(f"❌ Gateway init failed: {e}")
         sys.exit(1)
+
+    # Initialize Fraud Detection Engine
+    fraud_engine = FraudDetectionEngine()
+    log("🕵️‍♂️ Fraud Detection Engine initialized")
 
     # Start the Dashboard
     try:
@@ -118,23 +171,49 @@ def main():
                     if method in ("tools/call", "callTool"):
                         params = data.get("params", {})
                         tool_name = params.get("name", "")
-                        args = params.get("arguments", {})
+                        tool_args = params.get("arguments", {}) or {}
                         
-                        log(f"🔍 Checking tool call: {tool_name}")
-                        decision = gw.check(tool_name, args, agent="claude-desktop")
+                        # Extract user_id if available (Identity Awareness)
+                        user_id = tool_args.get("user_id") or tool_args.get("userId") or tool_args.get("username")
+                        if not user_id:
+                            user_id = "unknown_user"
+
+                        log(f"🔍 Checking tool call: {tool_name} (User: {user_id})")
+                        decision = gw.check(tool_name, tool_args, agent="claude-desktop")
+
+                        # Handle learning mode (using command-line args.learning)
+                        learning_allowed = False
+                        if args.learning and decision.blocked:
+                            log(f"📚 Learning mode: Logging blocked tool '{tool_name}' instead of refusing.")
+                            log_discovery(tool_name, tool_args, "claude-desktop")
+                            learning_allowed = True
+
+                        # Apply Fraud Detection Engine analysis
+                        fraud_blocked, final_action, final_reason, final_severity = fraud_engine.analyze(
+                            agent="claude-desktop",
+                            decision=decision,
+                            user_id=user_id
+                        )
+
+                        # Update decision based on fraud engine
+                        if fraud_blocked:
+                            decision.blocked = True
+                            decision.action = final_action
+                            decision.reason = final_reason
+                            decision.severity = final_severity
                         
                         # Add to dashboard
                         dashboard_state.add_event({
-                            "action": decision.action,
+                            "action": decision.action.value if hasattr(decision.action, 'value') else str(decision.action),
                             "tool": tool_name,
                             "agent": "claude-desktop",
                             "reason": decision.reason,
-                            "severity": decision.severity,
+                            "severity": decision.severity.value if hasattr(decision.severity, 'value') else str(decision.severity),
                             "stage": decision.stage,
                             "timestamp": time.time()
                         })
 
-                        if decision.blocked:
+                        if decision.blocked and not learning_allowed:
                             log(f"🚫 Blocked: {decision.reason}")
                             error_resp = {
                                 "jsonrpc": "2.0",

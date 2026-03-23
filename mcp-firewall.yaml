@@ -14,6 +14,21 @@ secrets:
 # We handle permissions in the general rules section below
 agents: {}
 
+# Zones and Environments (for Risk Assessment)
+zones:
+  - name: production
+    color: red
+    priority: critical
+  - name: staging
+    color: yellow
+    priority: medium
+  - name: dev
+    color: blue
+    priority: low
+
+# Dynamic Blocks (Auto-populated by Quarantine Tool)
+dynamic_blocks: []
+
 # General Rules (evaluated in order: FIRST MATCH WINS)
 rules:
   # 1. Block directory traversal patterns (using globs)
@@ -42,10 +57,11 @@ rules:
         path: "claude-desktop/**"
     action: allow
 
-  # 4. Default Allow for all other calls (including Keycloak tools)
-  - name: default-allow
-    tool: "*"
+  # 4. Default Allow for other tools (like Keycloak)
+  - name: allow-keycloak-tools
+    tool: "keycloak_*"
     action: allow
+    zone: staging # Default zone for these tools
 
 # Threat Feed Integration
 threat_feed:
