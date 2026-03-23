@@ -142,11 +142,26 @@ def add_spiffe_dashboard_event(spiffe_cfg):
 # SPIFFE RUNTIME POLICY
 # =========================
 
-ALLOWED_SPIFFE_IDS = {
-    "spiffe://runtime-shield/agent",
-    "spiffe://runtime-shield/dashboard",
-    "spiffe://runtime-shield/bridge"
-}
+def get_allowed_spiffe_ids():
+    """Parse allowed SPIFFE IDs from environment variable."""
+    allowed_ids_str = os.getenv(
+        "ALLOWED_SPIFFE_IDS",
+        "spiffe://runtime-shield/agent,spiffe://runtime-shield/dashboard,spiffe://runtime-shield/bridge"
+    ).strip()
+    
+    # Handle both comma-separated and JSON array formats
+    if allowed_ids_str.startswith("["):
+        try:
+            import json
+            return set(json.loads(allowed_ids_str))
+        except Exception:
+            pass
+    
+    # Comma-separated format
+    return set(id_.strip() for id_ in allowed_ids_str.split(",") if id_.strip())
+
+
+ALLOWED_SPIFFE_IDS = get_allowed_spiffe_ids()
 
 
 def spiffe_allowed(spiffe_id: str) -> bool:
@@ -171,13 +186,6 @@ def main():
         os.makedirs(WORKSPACE_DIR)
 
     os.makedirs(os.path.join(WORKSPACE_DIR, "claude-desktop"), exist_ok=True)
-
-    with open(os.path.join(WORKSPACE_DIR, "claude-desktop", "log_export.csv"), "w", encoding="utf-8") as f:
-        f.write("user_id,login_time,session_token\n101,2024-02-23,Bearer test-token-1234567890abcdef\n")
-
-    secrets_path = os.path.join(WORKSPACE_DIR, "claude-desktop", "secrets.txt")
-    if os.path.exists(secrets_path):
-        os.remove(secrets_path)
 
     server_cmd = ["node", NODE_SERVER_PATH]
 
