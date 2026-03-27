@@ -1,0 +1,17 @@
+{
+  "roles": {
+    "guest": 1,
+    "analyst": 2,
+    "admin": 3
+  },
+  "spiffe_bindings": {
+    "spiffe://runtime-shield/agent": "admin",
+    "spiffe://runtime-shield/dashboard": "analyst",
+    "spiffe://runtime-shield/bridge": "admin"
+  },
+  "tool_policies": {
+    "keycloak_revoke_user_sessions": "admin",
+    "keycloak_list_user_sessions": "analyst",
+    "keycloak_get_user_events": "guest"
+  }
+}

@@ -20,6 +20,7 @@ PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(PROJECT_DIR, "mcp-firewall.yaml")
 DOTENV_PATH = os.path.join(PROJECT_DIR, ".env")
 LOG_PATH = os.path.join(PROJECT_DIR, "bridge.log")
+RBAC_PATH = os.path.join(PROJECT_DIR, "rbac.json")
 
 
 def log(msg: str):
@@ -41,22 +42,23 @@ MCPWN_EXE = os.path.join(SCRIPTS_DIR, "mcpwn.exe")
 
 
 # =========================
-# TOOL ROLE POLICY
+# RBAC POLICY CONFIGURATION
 # =========================
 
-TOOL_ROLE_POLICY = {
-    "keycloak_revoke_user_sessions": "admin",
-    "keycloak_list_user_sessions": "analyst",
-    "keycloak_get_user_events": "guest"
-}
+def load_rbac_config():
+    try:
+        with open(RBAC_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        log(f"⚠️ Failed to load rbac.json: {e}")
+        return {"roles": {"guest": 1, "analyst": 2, "admin": 3}, "spiffe_bindings": {}, "tool_policies": {}}
 
-ROLE_LEVELS = {
-    "guest": 1,
-    "analyst": 2,
-    "admin": 3
-}
+RBAC_CONFIG = load_rbac_config()
+TOOL_ROLE_POLICY = RBAC_CONFIG.get("tool_policies", {})
+ROLE_LEVELS = RBAC_CONFIG.get("roles", {})
+SPIFFE_BINDINGS = RBAC_CONFIG.get("spiffe_bindings", {})
 
-# Use RUNTIME_ROLE consistently everywhere
+# Use RUNTIME_ROLE consistently everywhere as a default fallback
 DEFAULT_ROLE = os.getenv("RUNTIME_ROLE", "analyst").strip().lower()
 
 
@@ -76,7 +78,10 @@ def role_allowed(tool_name, user_role):
     user_role = normalize_role(user_role)
     required_role = normalize_role(required_role)
 
-    if ROLE_LEVELS[user_role] < ROLE_LEVELS[required_role]:
+    user_level = ROLE_LEVELS.get(user_role, 0)
+    required_level = ROLE_LEVELS.get(required_role, 0)
+
+    if user_level < required_level:
         return False, required_role
 
     return True, required_role
@@ -326,11 +331,21 @@ def main():
                             }
 
                         # ROLE CHECK
-                        user_role = normalize_role(args.get("role", DEFAULT_ROLE))
+                        # 1. Stripping Vulnerability: Actively remove client-provided spoof attributes
+                        if "role" in args:
+                            log("⚠️ Suspicious activity: Stripping client-provided role attribute. Identity must be mathematically proven.")
+                            del args["role"]
+
+                        # 2. Cryptographic Binding
+                        if spiffe_cfg["enabled"] and 'spiffe_id' in locals():
+                            user_role = normalize_role(SPIFFE_BINDINGS.get(spiffe_id, "guest"))
+                        else:
+                            user_role = normalize_role(DEFAULT_ROLE)
+
                         allowed, required = role_allowed(tool_name, user_role)
 
                         if not allowed:
-                            log(f"🚫 Role violation: {user_role} cannot use {tool_name}")
+                            log(f"🚫 Role violation: Cryptographically bound role '{user_role}' cannot use {tool_name}")
 
                             dashboard_state.add_event({
                                 "action": "block",
