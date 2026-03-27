@@ -6,7 +6,7 @@ services:
     command: ["start-dev"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: kavss
     ports:
       - "8080:8080"
     volumes:
@@ -22,6 +22,7 @@ services:
       - "/run/spire/config/server.conf"
     volumes:
       - ./spire/server:/run/spire/config
+      - ./spire/certs:/run/spire/certs:ro
       - spire-server-data:/opt/spire/data
     ports:
       - "8081:8081"
@@ -31,13 +32,13 @@ services:
   spire-agent:
     container_name: spire-agent
     image: ghcr.io/spiffe/spire-agent:1.8.0
+    user: "0:0"
     command:
       - "-config"
       - "/run/spire/config/agent.conf"
-
-
     volumes:
       - ./spire/agent:/run/spire/config
+      - ./spire/certs:/run/spire/certs:ro
       - spire-agent-data:/opt/spire/data
     depends_on:
       - spire-server

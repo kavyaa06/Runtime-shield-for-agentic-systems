@@ -6,6 +6,7 @@ import argparse
 import threading
 import json
 import time
+import re
 from mcp_firewall.sdk import Gateway
 from mcp_firewall.dashboard.server import start_dashboard
 from mcp_firewall.dashboard.app import state as dashboard_state
@@ -30,68 +31,116 @@ class FraudDetectionEngine:
         self.agent_risk_scores = {}
         self.user_risk_scores = {} # Identity-aware risk tracking
         self.last_calls = {} # Deduplication cache: {agent: (tool, args, timestamp)}
+        self.last_activity = {} # For cooldown/decay: {identifier: timestamp}
+        self.lock = threading.Lock() # Ensure thread-safe access
         self.RISK_THRESHOLD = 50
         self.learning_mode = learning_mode
+        self.DECAY_RATE = 5 # Points to remove per interval
+        self.DECAY_INTERVAL = 60 # Seconds per decay step (1 minute)
+
+        # Start background decay thread for real-time cooldown
+        threading.Thread(target=self._decay_loop, daemon=True).start()
+
+    def _decay_loop(self):
+        """Proactively decay risk scores every minute even if no tools are called."""
+        while True:
+            time.sleep(10) # Check every 10s for responsiveness
+            now = time.time()
+            with self.lock:
+                # Combine agents and users for check
+                all_ids = list(self.agent_risk_scores.keys()) + list(self.user_risk_scores.keys())
+                for entry in set(all_ids):
+                    if entry not in self.last_activity:
+                        continue
+                    
+                    elapsed = now - self.last_activity[entry]
+                    if elapsed >= self.DECAY_INTERVAL:
+                        # Perform decay
+                        if entry in self.agent_risk_scores:
+                            old_score = self.agent_risk_scores[entry]
+                            if old_score > 0:
+                                self.agent_risk_scores[entry] = max(0, old_score - self.DECAY_RATE)
+                                log(f"📉 Fraud Engine: Agent {entry} risk cooled down from {old_score} to {self.agent_risk_scores[entry]}")
+                        
+                        if entry in self.user_risk_scores:
+                            old_score = self.user_risk_scores[entry]
+                            if old_score > 0:
+                                self.user_risk_scores[entry] = max(0, old_score - self.DECAY_RATE)
+                                log(f"📉 Fraud Engine: User {entry} risk cooled down from {old_score} to {self.user_risk_scores[entry]}")
+
+                        self.last_activity[entry] = now # Reset timer after successful decay step
 
     def analyze(self, agent: str, decision, tool_name: str = None, tool_args: dict = None, user_id: str = None) -> tuple[bool, str, str, str]:
         action_val = decision.action.value if hasattr(decision.action, 'value') else str(decision.action)
+        now = time.time()
 
-        if agent not in self.agent_risk_scores:
-            self.agent_risk_scores[agent] = 0
-        
-        if user_id and user_id not in self.user_risk_scores:
-            self.user_risk_scores[user_id] = 0
+        with self.lock:
+            if agent not in self.agent_risk_scores:
+                self.agent_risk_scores[agent] = 0
+                self.last_activity[agent] = now
             
-        # Increase risk score based on static firewall triggers
-        risk_increase = 0
-        if action_val == "deny":
-            # --- RISK DEDUPLICATION ---
-            is_retry = False
-            if tool_name and tool_args and agent in self.last_calls:
-                last_tool, last_args, last_time = self.last_calls[agent]
-                time_diff = time.time() - last_time
-                
-                # Normalize arguments for comparison (e.g. paths trailing slashes)
-                current_args_norm = tool_args.copy()
-                last_args_norm = last_args.copy()
-                
-                for args_dict in [current_args_norm, last_args_norm]:
-                    if "path" in args_dict:
-                        # Strip trailing slashes and normalize separators
-                        args_dict["path"] = os.path.normpath(args_dict["path"]).rstrip(os.path.sep)
-                
-                if last_tool == tool_name and last_args_norm == current_args_norm and (time_diff < 60):
-                    is_retry = True
+            if user_id and user_id not in self.user_risk_scores:
+                self.user_risk_scores[user_id] = 0
+                self.last_activity[user_id] = now
             
-            if not is_retry:
-                risk_increase = 25
-            else:
-                log(f"🛡️ Fraud Engine: Risk deduplicated for repeated call to {tool_name}")
-            
-            # Update last call cache
-            if tool_name and tool_args:
-                self.last_calls[agent] = (tool_name, tool_args, time.time())
-                
-        elif action_val == "redact":
-            risk_increase = 15
-            
-        # Suppress risk score increments if in learning mode
-        if self.learning_mode:
+            # --- UPDATED: REFRESH ACTIVITY ---
+            # (Decay is now handled by _decay_loop background thread)
+
+            # Increase risk score based on static firewall triggers
             risk_increase = 0
+            if action_val == "deny":
+                # --- RISK DEDUPLICATION ---
+                is_retry = False
+                if tool_name and tool_args and agent in self.last_calls:
+                    last_tool, last_args, last_time = self.last_calls[agent]
+                    time_diff = now - last_time
+                    
+                    # Normalize arguments for comparison (e.g. paths trailing slashes)
+                    current_args_norm = tool_args.copy()
+                    last_args_norm = last_args.copy()
+                    
+                    for args_dict in [current_args_norm, last_args_norm]:
+                        if "path" in args_dict:
+                            # Strip trailing slashes and normalize separators
+                            args_dict["path"] = os.path.normpath(args_dict["path"]).rstrip(os.path.sep)
+                    
+                    if last_tool == tool_name and last_args_norm == current_args_norm and (time_diff < 60):
+                        is_retry = True
+                
+                if not is_retry:
+                    risk_increase = 20 # User set this to 20
+                else:
+                    log(f"🛡️ Fraud Engine: Risk deduplicated for repeated call to {tool_name}")
+                
+                # Update last call cache
+                if tool_name and tool_args:
+                    self.last_calls[agent] = (tool_name, tool_args, now)
+                    
+            elif action_val == "redact":
+                risk_increase = 10 # User set this to 10
+                
+            # Suppress risk score increments if in learning mode
+            if self.learning_mode:
+                risk_increase = 0
 
-        self.agent_risk_scores[agent] += risk_increase
-        if user_id:
-            self.user_risk_scores[user_id] += risk_increase
+            self.agent_risk_scores[agent] += risk_increase
+            if user_id:
+                self.user_risk_scores[user_id] += risk_increase
+                
+            # Keep activity alive so cooldown starts AFTER the last call
+            self.last_activity[agent] = now
+            if user_id:
+                self.last_activity[user_id] = now
+                
+            current_score = self.agent_risk_scores[agent]
+            if user_id:
+                current_score = max(current_score, self.user_risk_scores[user_id])
             
-        current_score = self.agent_risk_scores[agent]
-        if user_id:
-            current_score = max(current_score, self.user_risk_scores[user_id])
-        
-        # Determine if dynamic threshold is crossed
-        if current_score >= self.RISK_THRESHOLD:
-            return True, "deny", f"Fraud Engine Block: Risk Score ({current_score}) exceeded threshold ({self.RISK_THRESHOLD}).", "critical"
-            
-        return False, action_val, decision.reason, decision.severity.value if hasattr(decision.severity, 'value') else str(decision.severity)
+            # Determine if dynamic threshold is crossed
+            if current_score >= self.RISK_THRESHOLD:
+                return True, "deny", f"Fraud Engine Block: Risk Score ({current_score}) exceeded threshold ({self.RISK_THRESHOLD}).", "critical"
+                
+            return False, action_val, decision.reason, decision.severity.value if hasattr(decision.severity, 'value') else str(decision.severity)
 
 def log_discovery(tool, args, agent):
     with open(DISCOVERY_PATH, "a", encoding="utf-8") as f:
@@ -125,8 +174,8 @@ with open(LOG_PATH, "a", encoding="utf-8") as f:
     f.write(f"\n--- Secure Bridge Session Start: {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
 
 
-# Load .env and override any stale environment values
-load_dotenv(dotenv_path=DOTENV_PATH, override=True)
+# Load .env but don't override variables set in the terminal/environment
+load_dotenv(dotenv_path=DOTENV_PATH, override=False)
 
 SCRIPTS_DIR = os.path.join(os.environ.get('APPDATA', ''), 'Python', 'Python313', 'Scripts')
 MCPWN_EXE = os.path.join(SCRIPTS_DIR, "mcpwn.exe")
@@ -322,16 +371,24 @@ def main():
         log(f"❌ Gateway init failed: {e}")
         sys.exit(1)
 
+    # Toggling Learning Mode (Command Line or .env)
+    is_learning = args.learning or os.getenv("LEARNING_MODE", "false").lower() == "true"
+    
     # Initialize Fraud Detection Engine (Identity Aware & Resilience for AI agents)
-    fraud_engine = FraudDetectionEngine(learning_mode=args.learning)
-    log("🕵️‍♂️ Fraud Detection Engine initialized")
+    fraud_engine = FraudDetectionEngine(learning_mode=is_learning)
+    if is_learning:
+        log("📚 LEARNING MODE ACTIVE: Blocks will be discovered but not enforced (risk score = 0)")
+    else:
+        log("🕵️‍♂️ PROTECTION MODE ACTIVE: Fraud Engine will enforce risk limits")
 
-    # Start the Dashboard
+    # Start the Dashboard with configurable port
+    dashboard_port = int(os.getenv("DASHBOARD_PORT", "9090"))
     try:
-        start_dashboard()
-        log("📊 Dashboard active at http://127.0.0.1:9090")
+        start_dashboard(port=dashboard_port)
+        log(f"📊 Dashboard active at http://127.0.0.1:{dashboard_port}")
     except Exception as e:
-        log(f"⚠️ Dashboard failed to start: {e}")
+        log(f"⚠️ Dashboard failed to start on port {dashboard_port}: {e}")
+        log("ℹ️ Continuing without local dashboard (likely already running in another instance)")
 
     add_spiffe_dashboard_event(spiffe_cfg)
 
@@ -463,9 +520,9 @@ def main():
                             decision.reason = final_reason
                             decision.severity = final_severity
 
-                        # Handle learning mode
+                        # Handle learning mode (from command line or .env)
                         learning_allowed = False
-                        if args.learning and decision.blocked:
+                        if is_learning and decision.blocked:
                             log(f"📚 Learning mode: Logging blocked tool '{tool_name}'")
                             log_discovery(tool_name, tool_args, "claude-desktop")
                             learning_allowed = True
@@ -538,10 +595,15 @@ def main():
 
                 try:
                     redacted_result = gw.scan_response(line_str)
-
+                    
+                    # Manual Redaction Fallback (ensures emails are caught even if SDK matching lags)
+                    email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+                    manual_redacted = re.sub(email_pattern, '[REDACTED]', line_str)
+                    
                     if redacted_result.modified:
                         log("✂️ FIREWALL REDACTED sensitive data")
-
+                        line_str = redacted_result.content
+                        
                         for finding in redacted_result.findings:
                             dashboard_state.add_event({
                                 "action": "redact",
@@ -552,8 +614,18 @@ def main():
                                 "stage": "output-filter",
                                 "timestamp": time.time()
                             })
-
-                        line_str = redacted_result.content
+                    elif manual_redacted != line_str:
+                        log("✂️ FIREWALL REDACTED sensitive data (Manual Fallback)")
+                        line_str = manual_redacted
+                        dashboard_state.add_event({
+                            "action": "redact",
+                            "tool": "(response)",
+                            "agent": "claude-desktop",
+                            "reason": "Email PII (Fallback)",
+                            "severity": "medium",
+                            "stage": "output-filter-fallback",
+                            "timestamp": time.time()
+                        })
 
                         if not line_str.endswith("\n"):
                             line_str += "\n"

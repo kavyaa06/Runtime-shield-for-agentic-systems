@@ -37,7 +37,7 @@ rules:
     action: redact
     match:
       response:
-        contains: "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"
+        regex: ".*@.*"
   # 1. Block directory traversal patterns (using globs)
   - name: block-traversal
     tool: "read_file|list_directory|write_file"

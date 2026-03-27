@@ -48,7 +48,7 @@ export function registerTools(server: any) {
     },
     async ({ path: filePath }: any) => {
       try {
-        console.log(`🔍 READ_FILE CALLED for: ${filePath}`);
+        console.error(`🔍 READ_FILE CALLED for: ${filePath}`);
         // Standard reading - the bridge will intercept and block if unauthorized
         if (!fs.existsSync(filePath)) {
           return { content: [{ type: "text", text: `Error: File not found: ${filePath}` }] };
@@ -68,7 +68,7 @@ export function registerTools(server: any) {
     },
     async ({ path: dirPath }: any) => {
       try {
-        console.log(`🔍 LIST_DIRECTORY CALLED for: ${dirPath}`);
+        console.error(`🔍 LIST_DIRECTORY CALLED for: ${dirPath}`);
         if (!fs.existsSync(dirPath)) {
           return { content: [{ type: "text", text: `Error: Directory not found: ${dirPath}` }] };
         }
@@ -88,7 +88,7 @@ export function registerTools(server: any) {
     },
     async ({ path: filePath, content }: any) => {
       try {
-        console.log(`🔍 WRITE_FILE CALLED for: ${filePath}`);
+        console.error(`🔍 WRITE_FILE CALLED for: ${filePath}`);
         fs.writeFileSync(filePath, content);
         return { content: [{ type: "text", text: `✅ File written successfully to ${filePath}` }] };
       } catch (err: any) {
@@ -107,7 +107,7 @@ export function registerTools(server: any) {
     },
     async (params: any) => {
       try {
-        console.log("🔍 LIST ALL USERS CALLED");
+        console.error("🔍 LIST ALL USERS CALLED");
         const kc = await getKcClient();
         const users = await kc.users.find({ max: params.max });
         return {
@@ -133,7 +133,7 @@ export function registerTools(server: any) {
     },
     async (params: any) => {
       try {
-        console.log("🔍 LIST SESSIONS CALLED");
+        console.error("🔍 LIST SESSIONS CALLED");
         const kc = await getKcClient();
         const targetId = await resolveUserId(kc, params.userId, params.username);
         const sessions = await kc.users.listSessions({ id: targetId });
@@ -161,7 +161,7 @@ export function registerTools(server: any) {
     },
     async (params: any) => {
       try {
-        console.log("🔍 REVOKE CALLED");
+        console.error("🔍 REVOKE CALLED");
         const role = process.env.RUNTIME_ROLE || "analyst";
         if (role !== "admin") {
           return {
@@ -195,7 +195,7 @@ export function registerTools(server: any) {
     },
     async (params: any) => {
       try {
-        console.log("🔍 EVENTS CALLED");
+        console.error("🔍 EVENTS CALLED");
         const kc = await getKcClient();
         const targetId = await resolveUserId(kc, params.userId, params.username);
         const realm = process.env.KEYCLOAK_REALM || "runtime-shield";
