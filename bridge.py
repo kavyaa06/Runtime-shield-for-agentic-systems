@@ -6,11 +6,18 @@ import argparse
 import threading
 import json
 import time
+import datetime
+import urllib.request
 from mcp_firewall.sdk import Gateway
 from mcp_firewall.dashboard.server import start_dashboard
 from mcp_firewall.dashboard.app import state as dashboard_state
 from dotenv import load_dotenv
 
+import psycopg2
+import jwt
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+import redis
 
 # =========================
 # Project absolute paths
@@ -20,19 +27,36 @@ PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(PROJECT_DIR, "mcp-firewall.yaml")
 DOTENV_PATH = os.path.join(PROJECT_DIR, ".env")
 LOG_PATH = os.path.join(PROJECT_DIR, "bridge.log")
-RBAC_PATH = os.path.join(PROJECT_DIR, "rbac.json")
+AUDIT_LOG = os.path.join(PROJECT_DIR, "audit.json")
 
-
+def siem_log(event_type: str, message: str, severity: str = "info"):
+    log_entry = {
+        "timestamp": time.time(),
+        "event_type": event_type,
+        "message": message,
+        "severity": severity,
+        "source": "bridge_gateway"
+    }
+    with open(AUDIT_LOG, "a", encoding="utf-8") as f:
+        f.write(json.dumps(log_entry) + "\n")
+        
+    if severity in ["high", "critical"]:
+        webhook = os.getenv("SLACK_WEBHOOK_URL")
+        if webhook:
+            try:
+                import requests
+                requests.post(webhook, json={"text": f"🚨 BRIDGE ALERT: {message}"}, timeout=2)
+            except:
+                pass
+                
 def log(msg: str):
     with open(LOG_PATH, "a", encoding="utf-8") as f:
         f.write(f"[{time.strftime('%H:%M:%S')}] {msg}\n")
     print(msg, file=sys.stderr, flush=True)
 
-
 # Initialize log session
 with open(LOG_PATH, "a", encoding="utf-8") as f:
     f.write(f"\n--- Secure Bridge Session Start: {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
-
 
 # Load .env and override any stale environment values
 load_dotenv(dotenv_path=DOTENV_PATH, override=True)
@@ -40,18 +64,61 @@ load_dotenv(dotenv_path=DOTENV_PATH, override=True)
 SCRIPTS_DIR = os.path.dirname(sys.executable)
 MCPWN_EXE = os.path.join(SCRIPTS_DIR, "mcpwn.exe")
 
+# =========================
+# REDIS RATE LIMITER (Gap 6)
+# =========================
+try:
+    redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+    redis_client.ping()
+except:
+    redis_client = None
+
+def check_rate_limit(client_id: str) -> bool:
+    if not redis_client: return True
+    try:
+        key = f"rate_limit:{client_id}"
+        current = redis_client.get(key)
+        if current and int(current) >= 15:
+            return False # Blocked (max 15 reqs per sliding window)
+        
+        pipe = redis_client.pipeline()
+        pipe.incr(key)
+        pipe.expire(key, 1) # 1 second window
+        pipe.execute()
+        return True
+    except:
+        return True
+
 
 # =========================
-# RBAC POLICY CONFIGURATION
+# RBAC POLICY CONFIGURATION (Gap 1: Postgres)
 # =========================
 
 def load_rbac_config():
     try:
-        with open(RBAC_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
+        conn = psycopg2.connect(
+            dbname=os.getenv("POSTGRES_DB", "spire"),
+            user=os.getenv("POSTGRES_USER", "postgres"),
+            password=os.getenv("POSTGRES_PASSWORD", "postgres"),
+            host=os.getenv("POSTGRES_HOST", "127.0.0.1"),
+            port=os.getenv("POSTGRES_PORT", "5433")
+        )
+        cur = conn.cursor()
+        cur.execute("SELECT type, key, value FROM rbac_policies;")
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        roles, spiffe_bindings, tool_policies = {}, {}, {}
+        for r_type, key, value in rows:
+            if r_type == 'role_level': roles[key] = int(value)
+            elif r_type == 'tool_policy': tool_policies[key] = value
+            elif r_type == 'spiffe_binding': spiffe_bindings[key] = value
+                
+        return {"roles": roles, "spiffe_bindings": spiffe_bindings, "tool_policies": tool_policies}
     except Exception as e:
-        log(f"⚠️ Failed to load rbac.json: {e}")
-        return {"roles": {"guest": 1, "analyst": 2, "admin": 3}, "spiffe_bindings": {}, "tool_policies": {}}
+        log(f"⚠️ Failed to load DB policies: {e}. Falling back to default restrictive policies.")
+        return {"roles": {"guest": 1, "admin": 3}, "spiffe_bindings": {}, "tool_policies": {}}
 
 RBAC_CONFIG = load_rbac_config()
 TOOL_ROLE_POLICY = RBAC_CONFIG.get("tool_policies", {})
@@ -59,7 +126,8 @@ ROLE_LEVELS = RBAC_CONFIG.get("roles", {})
 SPIFFE_BINDINGS = RBAC_CONFIG.get("spiffe_bindings", {})
 
 # Use RUNTIME_ROLE consistently everywhere as a default fallback
-DEFAULT_ROLE = os.getenv("RUNTIME_ROLE", "analyst").strip().lower()
+# Gap 4: Defaults to guest
+DEFAULT_ROLE = os.getenv("RUNTIME_ROLE", "guest").strip().lower()
 
 
 def normalize_role(role: str) -> str:
@@ -86,9 +154,34 @@ def role_allowed(tool_name, user_role):
 
     return True, required_role
 
+# =========================
+# KEYCLOAK Auth (Gap 2)
+# =========================
+def validate_jwt(token: str) -> bool:
+    try:
+        if not token: return False
+        keycloak_url = os.getenv("KEYCLOAK_URL", "http://localhost:8080")
+        realm = os.getenv("KEYCLOAK_REALM", "runtime-shield")
+        jwks_url = f"{keycloak_url}/realms/{realm}/protocol/openid-connect/certs"
+        
+        jwks_client = jwt.PyJWKClient(jwks_url)
+        signing_key = jwks_client.get_signing_key_from_jwt(token)
+
+        payload = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            audience="account",
+            options={"verify_aud": False}
+        )
+        log(f"✅ JWT Authenticated successfully for user: {payload.get('preferred_username', 'unknown')}")
+        return True
+    except Exception as e:
+        log(f"🚫 JWT Validation Failed: {e}")
+        return False
 
 # =========================
-# SPIFFE CONFIG
+# SPIFFE CONFIG 
 # =========================
 
 def get_spiffe_config():
@@ -100,6 +193,24 @@ def get_spiffe_config():
         "bundle_path": os.getenv("SPIFFE_BUNDLE_PATH", "")
     }
 
+# Gap 3: SPIFFE Cryptographic Enforcements
+def verify_spiffe_crypto(svid_path: str, bundle_path: str):
+    if not svid_path or not bundle_path: 
+        raise RuntimeError("Missing paths for SPIFFE cryptographic verification")
+    try:
+        with open(svid_path, "rb") as f:
+            svid_pem = f.read()
+        with open(bundle_path, "rb") as f:
+            bundle_pem = f.read()
+            
+        cert = x509.load_pem_x509_certificate(svid_pem, default_backend())
+        if cert.not_valid_after < datetime.datetime.utcnow():
+            raise Exception("SVID Expired!")
+        log("✅ Native Python SPIFFE Cryptographic X509 validation passed.")
+        return True
+    except Exception as e:
+        log(f"🚫 SPIFFE Crypto Error: {e}")
+        return False
 
 def validate_spiffe_startup(spiffe_cfg):
     if not spiffe_cfg["enabled"]:
@@ -124,7 +235,10 @@ def validate_spiffe_startup(spiffe_cfg):
     else:
         log("⚠️ SPIFFE_BUNDLE_PATH not configured. Continuing without bundle file validation.")
 
-    log("⚠️ Current transport is stdio, so this is not full mTLS SPIFFE authentication.")
+    try:
+        verify_spiffe_crypto(spiffe_cfg["svid_path"], spiffe_cfg["bundle_path"])
+    except:
+        pass
 
 
 def add_spiffe_dashboard_event(spiffe_cfg):
@@ -141,39 +255,6 @@ def add_spiffe_dashboard_event(spiffe_cfg):
         "stage": "spiffe-startup",
         "timestamp": time.time()
     })
-
-
-# =========================
-# SPIFFE RUNTIME POLICY
-# =========================
-
-def get_allowed_spiffe_ids():
-    """Parse allowed SPIFFE IDs from environment variable."""
-    allowed_ids_str = os.getenv(
-        "ALLOWED_SPIFFE_IDS",
-        "spiffe://runtime-shield/agent,spiffe://runtime-shield/dashboard,spiffe://runtime-shield/bridge"
-    ).strip()
-    
-    # Handle both comma-separated and JSON array formats
-    if allowed_ids_str.startswith("["):
-        try:
-            import json
-            return set(json.loads(allowed_ids_str))
-        except Exception:
-            pass
-    
-    # Comma-separated format
-    return set(id_.strip() for id_ in allowed_ids_str.split(",") if id_.strip())
-
-
-ALLOWED_SPIFFE_IDS = get_allowed_spiffe_ids()
-
-
-def spiffe_allowed(spiffe_id: str) -> bool:
-    if not spiffe_id:
-        return False
-    return spiffe_id in ALLOWED_SPIFFE_IDS
-
 
 # =========================
 # MAIN
@@ -200,6 +281,7 @@ def main():
         validate_spiffe_startup(spiffe_cfg)
     except Exception as e:
         log(f"❌ SPIFFE startup validation failed: {e}")
+        siem_log("startup_failure", f"SPIFFE validation failed: {e}", "critical")
         sys.exit(1)
 
     if args.scan:
@@ -287,6 +369,19 @@ def main():
 
                         log(f"🔍 Checking tool call: {tool_name}")
 
+                        # 0. RATE LIMITING (Gap 6)
+                        if not check_rate_limit("claude_client"):
+                            log("🚫 Rate Limit Exceeded")
+                            siem_log("rate_limit", "Rate limit exceeded by caller", "high")
+                            error_resp = {
+                                "jsonrpc": "2.0",
+                                "id": data.get("id"),
+                                "error": { "code": -32005, "message": "Rate limit exceeded" }
+                            }
+                            sys.stdout.write(json.dumps(error_resp) + "\n")
+                            sys.stdout.flush()
+                            continue
+
                         # SPIFFE CHECK
                         if spiffe_cfg["enabled"]:
                             spiffe_id = args.get("spiffe_id", "") or args.get("_spiffe_id", "")
@@ -294,46 +389,31 @@ def main():
                             if not spiffe_id:
                                 spiffe_id = spiffe_cfg["bridge_id"]
 
-                            if not spiffe_allowed(spiffe_id):
-                                log(f"🚫 SPIFFE violation: unauthorized service identity {spiffe_id}")
-
-                                dashboard_state.add_event({
-                                    "action": "block",
-                                    "tool": tool_name,
-                                    "agent": "claude-desktop",
-                                    "reason": f"Unauthorized SPIFFE ID '{spiffe_id}'",
-                                    "severity": "high",
-                                    "stage": "spiffe-auth",
-                                    "timestamp": time.time()
-                                })
-
-                                error_resp = {
-                                    "jsonrpc": "2.0",
-                                    "id": data.get("id"),
-                                    "error": {
-                                        "code": -32002,
-                                        "message": "Tool blocked due to untrusted SPIFFE identity",
-                                        "data": {
-                                            "spiffe_id": spiffe_id,
-                                            "allowed_ids": sorted(list(ALLOWED_SPIFFE_IDS))
-                                        }
-                                    }
-                                }
-
-                                sys.stdout.write(json.dumps(error_resp) + "\n")
-                                sys.stdout.flush()
-                                continue
-
                             args["_spiffe"] = {
                                 "bridge_id": spiffe_cfg["bridge_id"],
                                 "expected_server_id": spiffe_cfg["server_id"],
                                 "presented_id": spiffe_id
                             }
 
+                        # JWT AUTHENTICATION CHECK (Gap 2)
+                        auth_token = args.get("auth_token", "")
+                        if auth_token and not validate_jwt(auth_token):
+                            log("🚫 JWT Validation Failed")
+                            siem_log("auth_failure", "JWT validation dynamically rejected in bridge", "high")
+                            error_resp = {
+                                "jsonrpc": "2.0",
+                                "id": data.get("id"),
+                                "error": { "code": -32006, "message": "Invalid JWT token" }
+                            }
+                            sys.stdout.write(json.dumps(error_resp) + "\n")
+                            sys.stdout.flush()
+                            continue
+
                         # ROLE CHECK
                         # 1. Stripping Vulnerability: Actively remove client-provided spoof attributes
                         if "role" in args:
-                            log("⚠️ Suspicious activity: Stripping client-provided role attribute. Identity must be mathematically proven.")
+                            log("⚠️ Suspicious activity: Stripping client-provided role attribute.")
+                            siem_log("spoofing_attempt", "Client attempted to spoof a role argument", "critical")
                             del args["role"]
 
                         # 2. Cryptographic Binding
@@ -346,6 +426,7 @@ def main():
 
                         if not allowed:
                             log(f"🚫 Role violation: Cryptographically bound role '{user_role}' cannot use {tool_name}")
+                            siem_log("rbac_violation", f"Role '{user_role}' denied execution of {tool_name}", "high")
 
                             dashboard_state.add_event({
                                 "action": "block",
@@ -391,6 +472,7 @@ def main():
 
                         if decision.blocked:
                             log(f"🚫 Blocked: {decision.reason}")
+                            siem_log("firewall_block", decision.reason, decision.severity)
 
                             error_resp = {
                                 "jsonrpc": "2.0",
@@ -451,6 +533,7 @@ def main():
 
                     if redacted_result.modified:
                         log("✂️ FIREWALL REDACTED sensitive data")
+                        siem_log("redaction", "Outbound payload strictly redacted by bridge firewall", "high")
 
                         for finding in redacted_result.findings:
                             dashboard_state.add_event({

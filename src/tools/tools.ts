@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getKcClient } from "../utils/keycloak";
-import { verifySpiffeIdentity } from "./spiffeAuth";
+import { verifySpiffeIdentityAgainstPolicy } from "./spiffeAuth";
 
 /* -----------------------------
    Resolve userId
@@ -29,17 +29,20 @@ async function resolveUserId(kc: any, userId?: string, username?: string) {
 }
 
 /* -----------------------------
-   Common Security Check
+   Common Security Check (DEFENSE IN DEPTH)
 ----------------------------- */
 async function authorize(action: string) {
-  // 🔐 Step 1: SPIFFE Authentication
-  const identity = await verifySpiffeIdentity();
+  // 🔐 Step 1: Strict SPIFFE Authentication Policy (Gap 7 fixed)
+  // Even if the Python Security Bridge is physically bypassed or exploited,
+  // the Node.js MCP daemon MATHEMATICALLY refuses to process commands from ANY 
+  // untrusted local processes. Only the Bridge is authorized to query Keycloak.
+  const identity = await verifySpiffeIdentityAgainstPolicy({
+      allowedSpiffeIds: [process.env.SPIFFE_BRIDGE_ID || "spiffe://runtime-shield/bridge"]
+  });
 
   if (!identity.valid || !identity.spiffe_id) {
-    throw new Error("❌ Unauthorized: Invalid SPIFFE identity");
+    throw new Error(`❌ Unauthorized: Node MCP Server dropping request. Identity unacceptable to policy framework or origin unverified.`);
   }
-
-  // 🛡️ Step 2: RBAC is handled primarily by bridge.py!
 
   return identity;
 }
