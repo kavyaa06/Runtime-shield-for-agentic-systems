@@ -1,0 +1,14 @@
+* [33m7633a4c[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/security-enhancements[m[33m, [m[1;31morigin/feature/security-enhancements[m[33m)[m Replace mock validation with real SPIFFE validation and move hardcoded IDs to env vars
+*   [33m8974dd6[m[33m ([m[1;31mkavyaa/feature/security-enhancements[m[33m)[m Resolved merge conflict by removing keycloak DB file
+[32m|[m[33m\[m  
+[32m|[m * [33m34a1251[m[33m ([m[1;31mkavyaa/main[m[33m)[m firewall updated
+* [33m|[m [33m9d3422d[m Fix: removed keycloak_data from repo to resolve conflict
+* [33m|[m [33m72ea3bc[m Cleanup: removed node_modules and build files
+* [33m|[m [33m6281760[m Added .gitignore and removed unnecessary files
+* [33m|[m [33m610505f[m Added SPIFFE, RBAC, and sensitive data detection
+* [33m|[m [33mb75a469[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m Initial commit - Runtime Shield project
+[33m|[m[33m/[m  
+* [33mcd53663[m firewall update
+* [33ma4b28cc[m firewall
+* [33m3f8f116[m update2
+* [33m92eddb5[m update1

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getKcClient } from "../utils/keycloak";
+import { verifySpiffeIdentity } from "./spiffeAuth";
 
 /* -----------------------------
    Resolve userId
@@ -28,12 +29,28 @@ async function resolveUserId(kc: any, userId?: string, username?: string) {
 }
 
 /* -----------------------------
+   Common Security Check
+----------------------------- */
+async function authorize(action: string) {
+  // 🔐 Step 1: SPIFFE Authentication
+  const identity = await verifySpiffeIdentity();
+
+  if (!identity.valid || !identity.spiffe_id) {
+    throw new Error("❌ Unauthorized: Invalid SPIFFE identity");
+  }
+
+  // 🛡️ Step 2: RBAC is handled primarily by bridge.py!
+
+  return identity;
+}
+
+/* -----------------------------
    Register tools
 ----------------------------- */
 export function registerTools(server: any) {
 
   /* -----------------------------
-     LIST USER SESSIONS (WORKING)
+     LIST USER SESSIONS
   ----------------------------- */
   server.tool(
     "keycloak_list_user_sessions",
@@ -43,9 +60,11 @@ export function registerTools(server: any) {
     },
 
     async (params: any) => {
-
       try {
         console.log("🔍 LIST SESSIONS CALLED");
+
+        // 🔐 Security Check
+        await authorize("list-sessions");
 
         const kc = await getKcClient();
 
@@ -69,14 +88,13 @@ export function registerTools(server: any) {
         };
 
       } catch (err: any) {
-
         console.error("SESSION ERROR:", err);
 
         return {
           content: [
             {
               type: "text",
-              text: `Session error: ${err.message}`
+              text: `❌ Session error: ${err.message}`
             }
           ]
         };
@@ -84,10 +102,8 @@ export function registerTools(server: any) {
     }
   );
 
-
   /* -----------------------------
-     REVOKE USER SESSIONS (FIXED)
-     ADMIN ONLY
+     REVOKE USER SESSIONS
   ----------------------------- */
   server.tool(
     "keycloak_revoke_user_sessions",
@@ -97,23 +113,11 @@ export function registerTools(server: any) {
     },
 
     async (params: any) => {
-
       try {
         console.log("🔍 REVOKE CALLED");
 
-        /* 🔐 RBAC */
-        const role = process.env.RUNTIME_ROLE || "analyst";
-
-        if (role !== "admin") {
-          return {
-            content: [
-              {
-                type: "text",
-                text: "❌ Only admin can revoke sessions"
-              }
-            ]
-          };
-        }
+        // 🔐 Security Check
+        await authorize("revoke-sessions");
 
         const kc = await getKcClient();
 
@@ -123,7 +127,6 @@ export function registerTools(server: any) {
           params.username
         );
 
-        /* ✅ DIRECT SDK CALL (NO HANG) */
         await kc.users.logout({
           id: targetId
         });
@@ -138,7 +141,6 @@ export function registerTools(server: any) {
         };
 
       } catch (err: any) {
-
         console.error("REVOKE ERROR:", err);
 
         return {
@@ -153,9 +155,8 @@ export function registerTools(server: any) {
     }
   );
 
-
   /* -----------------------------
-     GET USER EVENTS (WORKING)
+     GET USER EVENTS
   ----------------------------- */
   server.tool(
     "keycloak_get_user_events",
@@ -166,9 +167,11 @@ export function registerTools(server: any) {
     },
 
     async (params: any) => {
-
       try {
         console.log("🔍 EVENTS CALLED");
+
+        // 🔐 Security Check
+        await authorize("view-events");
 
         const kc = await getKcClient();
 
@@ -196,19 +199,17 @@ export function registerTools(server: any) {
         };
 
       } catch (err: any) {
-
         console.error("EVENT ERROR:", err);
 
         return {
           content: [
             {
               type: "text",
-              text: `Event error: ${err.message}`
+              text: `❌ Event error: ${err.message}`
             }
           ]
         };
       }
     }
   );
-
 }

@@ -13,6 +13,37 @@ services:
       - ./keycloak_data:/opt/keycloak/data
     restart: always
 
+  redis-rate-limiter:
+    container_name: redis-rate-limiter
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: always
+
+  envoy-proxy:
+    container_name: envoy-proxy
+    image: envoyproxy/envoy:v1.30.1
+    command: ["envoy", "-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]
+    ports:
+      - "8443:8443"
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
+      - spire-agent-data:/run/spire/sockets:ro
+    depends_on:
+      - keycloak
+      - spire-agent
+    restart: always
+
+  spire-db:
+    container_name: spire-db
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: spire
+    volumes:
+      - ./spire-db-data:/var/lib/postgresql/data
+    restart: always
 
   spire-server:
     container_name: spire-server
@@ -22,11 +53,12 @@ services:
       - "/run/spire/config/server.conf"
     volumes:
       - ./spire/server:/run/spire/config
-      - spire-server-data:/opt/spire/data
+      - spire-server-data:/run/spire/data
     ports:
       - "8081:8081"
+    depends_on:
+      - spire-db
     restart: always
-
 
   spire-agent:
     container_name: spire-agent
@@ -34,15 +66,13 @@ services:
     command:
       - "-config"
       - "/run/spire/config/agent.conf"
-
-
     volumes:
       - ./spire/agent:/run/spire/config
       - spire-agent-data:/opt/spire/data
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - spire-server
     restart: always
-
 
 volumes:
   spire-server-data:

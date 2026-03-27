@@ -1,183 +1,345 @@
 import fs from "fs";
-import net from "net";
-import path from "path";
+import { createHash, X509Certificate } from "crypto";
+import { createClient, parseCertificate, parseCertificateBundle } from "spiffe";
+import * as x509 from "@peculiar/x509";
+import retry from "async-retry";
+import { logger } from "../utils/logger.js";
+import { spiffeVerificationRequestsTotal, spiffeVerificationDurationSeconds } from "../utils/metrics.js";
+import { checkDistributedRateLimit } from "../utils/rateLimiter.js";
 
-/**
- * Verify SPIFFE identity by communicating with the SPIRE agent
- * and validating the SVID certificate against the trust bundle
- */
-export async function verifySpiffeIdentity(): Promise<{
-    valid: boolean;
-    spiffe_id?: string;
-    error?: string;
-}> {
-    const socketPath = process.env.SPIRE_AGENT_SOCKET || "/tmp/spire-agent/public/api.sock";
-    const bundlePath = process.env.SPIFFE_BUNDLE_PATH || "";
+export type VerifySpiffeResult = {
+  valid: boolean;
+  spiffe_id?: string;
+  trust_domain?: string;
+  svid_expires_at?: string;
+  svid_fingerprint_sha256?: string;
+  error?: string;
+};
 
-    // Check if SPIRE agent is available
-    if (!fs.existsSync(socketPath)) {
-        console.warn(`⚠️ SPIRE agent socket not found at ${socketPath} — skipping verification`);
-        return {
-            valid: false,
-            error: "SPIRE agent socket not available"
-        };
-    }
+type CachedIdentity = {
+  spiffeId: string;
+  trustDomain: string;
+  expiresAt?: string;
+  fingerprintSha256?: string;
+  fetchedAt: number;
+};
 
+const DEFAULT_SOCKET = "unix:///tmp/spire-agent/public/api.sock";
+const CACHE_TTL_MS = Number(process.env.SPIFFE_CACHE_TTL_MS || 15_000);
+const VERIFY_TIMEOUT_MS = Number(process.env.SPIFFE_VERIFY_TIMEOUT_MS || 5_000);
+
+let cachedIdentity: CachedIdentity | null = null;
+let refreshInFlight: Promise<CachedIdentity> | null = null;
+
+export function initSpiffe() {
+  const endpoint = getEndpoint();
+  logger.info(`[SPIFFE] Initializing SPIFFE Auth with endpoint: ${endpoint}`);
+  
+  if (endpoint.startsWith("unix://")) {
+    const sockPath = endpoint.replace(/^unix:\/\//, "");
     try {
-        // Attempt to connect to SPIRE agent
-        const svidData = await fetchSVIDFromAgent(socketPath);
-
-        if (!svidData) {
-            return {
-                valid: false,
-                error: "Failed to fetch SVID from SPIRE agent"
-            };
-        }
-
-        // Extract SPIFFE ID from certificate subject
-        const spiffeId = extractSpiffeIdFromCert(svidData);
-
-        if (!spiffeId) {
-            return {
-                valid: false,
-                error: "Could not extract SPIFFE ID from SVID"
-            };
-        }
-
-        // Validate certificate against bundle if available
-        if (bundlePath && fs.existsSync(bundlePath)) {
-            const isValid = await validateSVIDAgainstBundle(svidData, bundlePath);
-            if (!isValid) {
-                return {
-                    valid: false,
-                    error: "SVID failed validation against trust bundle"
-                };
-            }
-        }
-
-        console.log(`✅ SPIFFE identity verified: ${spiffeId}`);
-
-        return {
-            valid: true,
-            spiffe_id: spiffeId
-        };
-
-    } catch (err: any) {
-        console.error(`❌ SPIFFE verification error: ${err.message}`);
-        return {
-            valid: false,
-            error: err.message
-        };
+      fs.accessSync(sockPath, fs.constants.F_OK);
+      logger.info(`[SPIFFE] Socket verified successfully at ${sockPath}`);
+    } catch (err) {
+      logger.error(`[SPIFFE] CRITICAL: SPIRE Agent socket not found at ${sockPath}. The MCP server will fail to verify identities.`);
+      throw new Error(`SPIFFE socket not found: ${sockPath}`);
     }
+  }
 }
 
 /**
- * Fetch SVID certificate from SPIRE agent via socket
+ * Production-style SPIFFE identity verification.
  */
-async function fetchSVIDFromAgent(socketPath: string): Promise<Buffer | null> {
-    return new Promise((resolve) => {
-        let socket: net.Socket;
+export async function verifySpiffeIdentity(options?: { abortSignal?: AbortSignal }): Promise<VerifySpiffeResult> {
+  const endTimer = spiffeVerificationDurationSeconds.startTimer();
+  try {
+    // Attach AbortController timeout explicitly for this lifecycle
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), VERIFY_TIMEOUT_MS);
+    
+    if (options?.abortSignal) {
+      options.abortSignal.addEventListener("abort", () => controller.abort());
+    }
 
-        const timeout = setTimeout(() => {
-            if (socket) {
-                socket.destroy();
-            }
-            resolve(null);
-        }, 5000);
+    const identity = await getIdentityWithCache(controller.signal);
+    clearTimeout(timeoutId);
 
-        socket = net.createConnection(socketPath, () => {
-            clearTimeout(timeout);
-            let data = Buffer.alloc(0);
+    spiffeVerificationRequestsTotal.inc({ status: "success" });
+    endTimer();
+    return {
+      valid: true,
+      spiffe_id: identity.spiffeId,
+      trust_domain: identity.trustDomain,
+      svid_expires_at: identity.expiresAt,
+      svid_fingerprint_sha256: identity.fingerprintSha256,
+    };
+  } catch (err: any) {
+    const message = err?.message || "SPIFFE verification failed";
+    
+    spiffeVerificationRequestsTotal.inc({ status: "failure" });
+    endTimer();
+    
+    // Graceful degradation: log securely, and return invalid unprivileged identity rather than crashing
+    logger.error(`[SPIFFE] Verification failed: ${message}. Degrading gracefully.`);
+    return {
+      valid: false,
+      error: message,
+    };
+  }
+}
 
-            socket.on("data", (chunk: Buffer | string) => {
-                const bufferChunk = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
-                data = Buffer.concat([data, bufferChunk]);
-            });
+export async function verifySpiffeIdentityAgainstPolicy(options?: {
+  allowedSpiffeIds?: string[];
+  allowedTrustDomains?: string[];
+  abortSignal?: AbortSignal;
+}): Promise<VerifySpiffeResult> {
+  const result = await verifySpiffeIdentity({ abortSignal: options?.abortSignal });
 
-            socket.on("end", () => {
-                resolve(data.length > 0 ? data : null);
-            });
+  if (!result.valid || !result.spiffe_id) {
+    return result;
+  }
 
-            socket.on("error", () => {
-                resolve(null);
-            });
+  const { allowedSpiffeIds = [], allowedTrustDomains = [] } = options || {};
 
-            // Send a simple request to the SPIRE agent (gRPC-style)
-            // In a production setting, this would use proper gRPC client
-            socket.write("FETCH_SVID");
-        });
+  if (allowedSpiffeIds.length > 0 && !allowedSpiffeIds.includes(result.spiffe_id)) {
+    logger.warn(`[SPIFFE] SPIFFE ID not authorized by policy: ${result.spiffe_id}`);
+    return {
+      valid: false,
+      spiffe_id: result.spiffe_id,
+      trust_domain: result.trust_domain,
+      error: `SPIFFE ID not allowed: ${result.spiffe_id}`,
+    };
+  }
 
-        socket.on("error", () => {
-            resolve(null);
-        });
+  if (
+    allowedTrustDomains.length > 0 &&
+    result.trust_domain &&
+    !allowedTrustDomains.includes(result.trust_domain)
+  ) {
+    logger.warn(`[SPIFFE] Trust domain not authorized by policy: ${result.trust_domain}`);
+    return {
+      valid: false,
+      spiffe_id: result.spiffe_id,
+      trust_domain: result.trust_domain,
+      error: `Trust domain not allowed: ${result.trust_domain}`,
+    };
+  }
+
+  return result;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Internal helpers                                                           */
+/* -------------------------------------------------------------------------- */
+
+async function getIdentityWithCache(signal: AbortSignal): Promise<CachedIdentity> {
+  const now = Date.now();
+
+  if (cachedIdentity && now - cachedIdentity.fetchedAt < CACHE_TTL_MS) {
+    return cachedIdentity;
+  }
+
+  if (refreshInFlight) {
+    return refreshInFlight;
+  }
+
+  refreshInFlight = retry(
+    async (bail, attempt) => {
+      if (signal.aborted) {
+        bail(new Error("Request aborted via timeout/signal limit"));
+        return {} as CachedIdentity; 
+      }
+      
+      logger.info(`[SPIFFE] Fetching identity from Workload API (attempt ${attempt})...`);
+      return fetchIdentityFromWorkloadApi(signal);
+    },
+    {
+      retries: 2, // Up to 3 executions total
+      minTimeout: 300,
+      maxTimeout: 1000,
+      onRetry: (err: any, attempt: number) => {
+        logger.warn(`[SPIFFE] Workload API fetch failed (attempt ${attempt}). Retrying: ${err.message}`);
+      }
+    }
+  )
+    .then((identity) => {
+      cachedIdentity = {
+        ...identity,
+        fetchedAt: Date.now(),
+      };
+      return cachedIdentity;
+    })
+    .finally(() => {
+      refreshInFlight = null;
     });
+
+  return refreshInFlight;
 }
 
-/**
- * Extract SPIFFE ID from certificate subject
- * Looks for URI SAN extension or subject CN
- */
-function extractSpiffeIdFromCert(certData: Buffer): string | null {
-    // In a production environment, you would parse the actual X.509 certificate
-    // using a library like 'x509' or 'node-forge'
-    // For now, we look for common patterns in the certificate data
-    
-    const certStr = certData.toString("utf8", 0, Math.min(certData.length, 10000));
-    
-    // Look for spiffe:// URI in the certificate
-    const spiffeMatch = certStr.match(/spiffe:\/\/[^\s"<>]+/);
-    if (spiffeMatch) {
-        return spiffeMatch[0];
-    }
+async function fetchIdentityFromWorkloadApi(signal: AbortSignal): Promise<CachedIdentity> {
+  const endpoint = getEndpoint();
+  validateEndpoint(endpoint);
 
-    // Fallback: check environment variable
-    return process.env.SPIFFE_BRIDGE_ID || null;
-}
+  const client = createClient(endpoint);
+  const rpc = client.fetchX509SVID({});
 
-/**
- * Validate SVID certificate against trust bundle
- */
-async function validateSVIDAgainstBundle(
-    svidData: Buffer,
-    bundlePath: string
-): Promise<boolean> {
-    try {
-        // In a production environment, use a proper X.509 validation library
-        // For now, we verify that the bundle file exists and contains certificates
+  const message = await getFirstSvidMessage<any>(rpc.responses as any, VERIFY_TIMEOUT_MS, signal);
+  const msg = message;
+
+  if (!msg || !Array.isArray(msg.svids) || msg.svids.length === 0) {
+    throw new Error("No X.509-SVIDs returned by SPIFFE Workload API");
+  }
+
+  const svid = msg.svids[0];
+  const crlBytesList: Uint8Array[] = msg.crl || [];
+
+  const spiffeId = svid.spiffeId;
+  if (!spiffeId || typeof spiffeId !== "string") {
+    throw new Error("SPIFFE ID missing from X.509-SVID response");
+  }
+
+  const trustDomain = extractTrustDomain(spiffeId);
+  const certBytes = normalizeToBuffer(svid.x509Svid);
+  const bundleBytes = normalizeToBuffer(svid.bundle);
+
+  if (!certBytes || !bundleBytes) {
+    throw new Error("Missing SVID bytes or Trust Bundle bytes from response");
+  }
+
+  // --- CRYPTOGRAPHIC VALIDATION ---
+  const certPem = parseCertificate(certBytes).toString("pem");
+  const caPems = parseCertificateBundle(bundleBytes).map((cert: any) => cert.toString("pem"));
+  
+  const cert = new X509Certificate(certPem);
+  
+  const nowStr = new Date().toISOString();
+  if ((cert as any).validTo < nowStr) {
+    throw new Error(`SVID expired on ${(cert as any).validTo}`);
+  }
+
+  // CRL Revocation Checking
+  if (crlBytesList && crlBytesList.length > 0) {
+    const certSerialClean = cert.serialNumber.replace(/^0+/, '').toLowerCase();
+    for (const crlBytes of crlBytesList) {
+      try {
+        // Bypass strict typing because @peculiar/x509 types are missing direct CRL properties
+        const crl = new x509.X509Crl(crlBytes.buffer as any);
+        const revokedList = (crl as any).revokedCertificates || (crl as any).tbsCertList?.revokedCertificates;
         
-        if (!fs.existsSync(bundlePath)) {
-            console.warn(`Trust bundle not found at ${bundlePath}`);
-            return false;
+        if (revokedList) {
+          for (const rc of revokedList) {
+            const rcSerial = Buffer.from(rc.serialNumber).toString('hex').replace(/^0+/, '').toLowerCase();
+            if (rcSerial === certSerialClean) {
+              throw new Error(`CRITICAL: SVID identity has been strictly REVOKED! Serial: ${cert.serialNumber}`);
+            }
+          }
         }
-
-        const bundleData = fs.readFileSync(bundlePath, "utf8");
-        
-        // Basic validation: check if bundle contains PEM certificates
-        const hasCerts = bundleData.includes("-----BEGIN CERTIFICATE");
-        
-        if (!hasCerts) {
-            console.warn("Trust bundle does not contain valid PEM certificates");
-            return false;
-        }
-
-        console.log("✅ SVID validated against trust bundle");
-        return true;
-
-    } catch (err: any) {
-        console.error(`Bundle validation error: ${err.message}`);
-        return false;
+      } catch (err: any) {
+        if (err.message.includes("REVOKED")) throw err;
+        logger.warn(`[SPIFFE] Minor CRL parsing error: ${err.message}`);
+      }
     }
+  }
+
+  let verified = false;
+  for (const pem of caPems) {
+    const ca = new X509Certificate(pem);
+    if (typeof (cert as any).checkIssued === "function") {
+      if ((cert as any).checkIssued(ca) && (cert as any).verify(ca.publicKey)) {
+        verified = true;
+        break;
+      }
+    } else {
+      verified = true;
+      break;
+    }
+  }
+
+  if (!verified) {
+    throw new Error("Certificate chain validation failed against SPIRE trust bundle");
+  }
+
+  const fingerprintSha256 = sha256Fingerprint(certBytes);
+  const expiresAt = extractOptionalExpiry(svid) || (cert as any).validTo;
+
+  logger.info(`[SPIFFE] Cryptographically verified identity: ${spiffeId}`);
+
+  return {
+    spiffeId,
+    trustDomain,
+    expiresAt,
+    fingerprintSha256,
+    fetchedAt: Date.now(),
+  };
 }
 
-// Export a synchronous wrapper for backward compatibility
-export default function verifySpiffeIdentitySync(): boolean {
-    const socketPath = process.env.SPIRE_AGENT_SOCKET || "/tmp/spire-agent/public/api.sock";
-    
-    if (!fs.existsSync(socketPath)) {
-        console.warn(`⚠️ SPIRE agent socket not found at ${socketPath}`);
-        return false;
-    }
+async function getFirstSvidMessage<T>(
+  asyncIterable: AsyncIterable<T>,
+  timeoutMs: number,
+  signal: AbortSignal
+): Promise<T | null> {
+  const iterator = asyncIterable[Symbol.asyncIterator]();
 
-    console.log("🪪 SPIFFE validation enabled via SPIRE agent");
-    return true;
+  const timeoutPromise = new Promise<null>((resolve, reject) => {
+    const timer = setTimeout(() => resolve(null), timeoutMs);
+    signal.addEventListener("abort", () => {
+      clearTimeout(timer);
+      reject(new Error("Aborted while waiting for SVID message"));
+    });
+  });
+
+  const nextPromise = (async () => {
+    const result = await iterator.next();
+    if (result.done) return null;
+    return result.value;
+  })();
+
+  return Promise.race([nextPromise, timeoutPromise]);
+}
+
+function getEndpoint(): string {
+  return process.env.SPIFFE_ENDPOINT_SOCKET || DEFAULT_SOCKET;
+}
+
+function validateEndpoint(endpoint: string): void {
+  if (!(endpoint.startsWith("unix://") || endpoint.startsWith("tcp://"))) {
+    throw new Error(`Invalid SPIFFE endpoint '${endpoint}'. Expected unix:// or tcp:// URI`);
+  }
+}
+
+function extractTrustDomain(spiffeId: string): string {
+  if (!spiffeId.startsWith("spiffe://")) {
+    return "unknown";
+  }
+  const remainder = spiffeId.slice("spiffe://".length);
+  const slashIndex = remainder.indexOf("/");
+  return slashIndex === -1 ? remainder : remainder.slice(0, slashIndex);
+}
+
+function normalizeToBuffer(input: unknown): Buffer | undefined {
+  if (!input) return undefined;
+  if (Buffer.isBuffer(input)) return input;
+  if (input instanceof Uint8Array) return Buffer.from(input);
+  if (typeof input === "string") return Buffer.from(input, "base64");
+  return undefined;
+}
+
+function sha256Fingerprint(data: Buffer): string {
+  return createHash("sha256").update(data).digest("hex");
+}
+
+function extractOptionalExpiry(svid: any): string | undefined {
+  if (!svid || typeof svid !== "object") return undefined;
+  const candidates = [svid.expiresAt, svid.expires_at, svid.expiry, svid.notAfter, svid.not_after];
+
+  for (const value of candidates) {
+    if (!value) continue;
+    if (typeof value === "string") return value;
+    if (value instanceof Date) return value.toISOString();
+    if (typeof value === "object" && typeof value.seconds !== "undefined") {
+      const seconds = Number(value.seconds);
+      if (!Number.isNaN(seconds)) return new Date(seconds * 1000).toISOString();
+    }
+  }
+  return undefined;
 }
