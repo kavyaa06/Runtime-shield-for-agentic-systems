@@ -39,6 +39,90 @@ async function resolveUserId(kc: any, userId?: string, username?: string) {
 export function registerTools(server: any) {
 
   /* -----------------------------
+     FILESYSTEM TOOLS (Protected by Bridge Firewall)
+  ----------------------------- */
+  server.tool(
+    "read_file",
+    {
+      path: z.string().describe("Path to the file to read")
+    },
+    async ({ path: filePath }: any) => {
+      try {
+        console.log(`🔍 READ_FILE CALLED for: ${filePath}`);
+        // Standard reading - the bridge will intercept and block if unauthorized
+        if (!fs.existsSync(filePath)) {
+          return { content: [{ type: "text", text: `Error: File not found: ${filePath}` }] };
+        }
+        const content = fs.readFileSync(filePath, "utf-8");
+        return { content: [{ type: "text", text: content }] };
+      } catch (err: any) {
+        return { content: [{ type: "text", text: `Read error: ${err.message}` }] };
+      }
+    }
+  );
+
+  server.tool(
+    "list_directory",
+    {
+      path: z.string().describe("Path to the directory to list")
+    },
+    async ({ path: dirPath }: any) => {
+      try {
+        console.log(`🔍 LIST_DIRECTORY CALLED for: ${dirPath}`);
+        if (!fs.existsSync(dirPath)) {
+          return { content: [{ type: "text", text: `Error: Directory not found: ${dirPath}` }] };
+        }
+        const files = fs.readdirSync(dirPath);
+        return { content: [{ type: "text", text: files.join("\n") }] };
+      } catch (err: any) {
+        return { content: [{ type: "text", text: `List error: ${err.message}` }] };
+      }
+    }
+  );
+
+  server.tool(
+    "write_file",
+    {
+      path: z.string().describe("Path to write to"),
+      content: z.string().describe("Content to write")
+    },
+    async ({ path: filePath, content }: any) => {
+      try {
+        console.log(`🔍 WRITE_FILE CALLED for: ${filePath}`);
+        fs.writeFileSync(filePath, content);
+        return { content: [{ type: "text", text: `✅ File written successfully to ${filePath}` }] };
+      } catch (err: any) {
+        return { content: [{ type: "text", text: `Write error: ${err.message}` }] };
+      }
+    }
+  );
+
+  /* -----------------------------
+     LIST ALL USERS
+  ----------------------------- */
+  server.tool(
+    "keycloak_list_users",
+    {
+      max: z.number().optional().default(20),
+    },
+    async (params: any) => {
+      try {
+        console.log("🔍 LIST ALL USERS CALLED");
+        const kc = await getKcClient();
+        const users = await kc.users.find({ max: params.max });
+        return {
+          content: [{ type: "text", text: JSON.stringify(users || [], null, 2) }]
+        };
+      } catch (err: any) {
+        console.error("LIST USERS ERROR:", err);
+        return {
+          content: [{ type: "text", text: `List users error: ${err.message}` }]
+        };
+      }
+    }
+  );
+
+  /* -----------------------------
      LIST USER SESSIONS
   ----------------------------- */
   server.tool(

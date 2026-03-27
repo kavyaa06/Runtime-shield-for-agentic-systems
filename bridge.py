@@ -11,10 +11,13 @@ from mcp_firewall.dashboard.server import start_dashboard
 from mcp_firewall.dashboard.app import state as dashboard_state
 from dotenv import load_dotenv
 
+# Ensure UTF-8 for Windows
+if sys.platform == "win32":
+    import codecs
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
 
-# =========================
-# Project absolute paths
-# =========================
+\
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(PROJECT_DIR, "mcp-firewall.yaml")
@@ -23,12 +26,14 @@ LOG_PATH = os.path.join(PROJECT_DIR, "bridge.log")
 DISCOVERY_PATH = os.path.join(PROJECT_DIR, "discovery.log")
 
 class FraudDetectionEngine:
-    def __init__(self):
+    def __init__(self, learning_mode=False):
         self.agent_risk_scores = {}
         self.user_risk_scores = {} # Identity-aware risk tracking
+        self.last_calls = {} # Deduplication cache: {agent: (tool, args, timestamp)}
         self.RISK_THRESHOLD = 50
+        self.learning_mode = learning_mode
 
-    def analyze(self, agent: str, decision, user_id: str = None) -> tuple[bool, str, str, str]:
+    def analyze(self, agent: str, decision, tool_name: str = None, tool_args: dict = None, user_id: str = None) -> tuple[bool, str, str, str]:
         action_val = decision.action.value if hasattr(decision.action, 'value') else str(decision.action)
 
         if agent not in self.agent_risk_scores:
@@ -40,10 +45,40 @@ class FraudDetectionEngine:
         # Increase risk score based on static firewall triggers
         risk_increase = 0
         if action_val == "deny":
-            risk_increase = 25
+            # --- RISK DEDUPLICATION ---
+            is_retry = False
+            if tool_name and tool_args and agent in self.last_calls:
+                last_tool, last_args, last_time = self.last_calls[agent]
+                time_diff = time.time() - last_time
+                
+                # Normalize arguments for comparison (e.g. paths trailing slashes)
+                current_args_norm = tool_args.copy()
+                last_args_norm = last_args.copy()
+                
+                for args_dict in [current_args_norm, last_args_norm]:
+                    if "path" in args_dict:
+                        # Strip trailing slashes and normalize separators
+                        args_dict["path"] = os.path.normpath(args_dict["path"]).rstrip(os.path.sep)
+                
+                if last_tool == tool_name and last_args_norm == current_args_norm and (time_diff < 60):
+                    is_retry = True
+            
+            if not is_retry:
+                risk_increase = 25
+            else:
+                log(f"🛡️ Fraud Engine: Risk deduplicated for repeated call to {tool_name}")
+            
+            # Update last call cache
+            if tool_name and tool_args:
+                self.last_calls[agent] = (tool_name, tool_args, time.time())
+                
         elif action_val == "redact":
             risk_increase = 15
             
+        # Suppress risk score increments if in learning mode
+        if self.learning_mode:
+            risk_increase = 0
+
         self.agent_risk_scores[agent] += risk_increase
         if user_id:
             self.user_risk_scores[user_id] += risk_increase
@@ -71,9 +106,18 @@ def log_discovery(tool, args, agent):
 
 
 def log(msg: str):
-    with open(LOG_PATH, "a", encoding="utf-8") as f:
-        f.write(f"[{time.strftime('%H:%M:%S')}] {msg}\n")
-    print(msg, file=sys.stderr, flush=True)
+    timestamp = time.strftime('%H:%M:%S')
+    try:
+        with open(LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(f"[{timestamp}] {msg}\n")
+    except Exception:
+        pass
+    
+    try:
+        print(msg, file=sys.stderr, flush=True)
+    except UnicodeEncodeError:
+        # Fallback for terminals that don't support UTF-8
+        print(msg.encode('ascii', 'replace').decode('ascii'), file=sys.stderr, flush=True)
 
 
 # Initialize log session
@@ -84,8 +128,15 @@ with open(LOG_PATH, "a", encoding="utf-8") as f:
 # Load .env and override any stale environment values
 load_dotenv(dotenv_path=DOTENV_PATH, override=True)
 
-SCRIPTS_DIR = os.path.dirname(sys.executable)
+SCRIPTS_DIR = os.path.join(os.environ.get('APPDATA', ''), 'Python', 'Python313', 'Scripts')
 MCPWN_EXE = os.path.join(SCRIPTS_DIR, "mcpwn.exe")
+
+# Fallback to sys.executable's scripts dir if not in user dir
+if not os.path.exists(MCPWN_EXE):
+    SCRIPTS_DIR = os.path.dirname(sys.executable)
+    if os.path.exists(os.path.join(SCRIPTS_DIR, "Scripts")):
+        SCRIPTS_DIR = os.path.join(SCRIPTS_DIR, "Scripts")
+    MCPWN_EXE = os.path.join(SCRIPTS_DIR, "mcpwn.exe")
 
 
 # =========================
@@ -95,6 +146,7 @@ MCPWN_EXE = os.path.join(SCRIPTS_DIR, "mcpwn.exe")
 TOOL_ROLE_POLICY = {
     "keycloak_revoke_user_sessions": "admin",
     "keycloak_list_user_sessions": "analyst",
+    "keycloak_list_users": "analyst",
     "keycloak_get_user_events": "guest"
 }
 
@@ -270,8 +322,8 @@ def main():
         log(f"❌ Gateway init failed: {e}")
         sys.exit(1)
 
-    # Initialize Fraud Detection Engine
-    fraud_engine = FraudDetectionEngine()
+    # Initialize Fraud Detection Engine (Identity Aware & Resilience for AI agents)
+    fraud_engine = FraudDetectionEngine(learning_mode=args.learning)
     log("🕵️‍♂️ Fraud Detection Engine initialized")
 
     # Start the Dashboard
@@ -333,16 +385,14 @@ def main():
                     if method in ("tools/call", "callTool"):
                         params = data.get("params", {})
                         tool_name = params.get("name", "")
-                        args = params.get("arguments", {}) or {}
+                        tool_args = params.get("arguments", {}) or {}
                         
                         # Extract user_id if available (Identity Awareness)
-                        user_id = args.get("user_id") or args.get("userId") or args.get("username") or "unknown_user"
+                        user_id = tool_args.get("user_id") or tool_args.get("userId") or tool_args.get("username") or "unknown_user"
 
-                        log(f"🔍 Checking tool call: {tool_name} (User: {user_id})")
-
-                        # 1. SPIFFE CHECK
+                                          # 1. SPIFFE CHECK
                         if spiffe_cfg["enabled"]:
-                            spiffe_id = args.get("spiffe_id", "") or args.get("_spiffe_id", "")
+                            spiffe_id = tool_args.get("spiffe_id", "") or tool_args.get("_spiffe_id", "")
                             if not spiffe_id:
                                 spiffe_id = spiffe_cfg["bridge_id"]
 
@@ -370,7 +420,7 @@ def main():
                                 continue
 
                         # 2. ROLE CHECK
-                        user_role = normalize_role(args.get("role", DEFAULT_ROLE))
+                        user_role = normalize_role(tool_args.get("role", DEFAULT_ROLE))
                         allowed, required = role_allowed(tool_name, user_role)
                         if not allowed:
                             log(f"🚫 Role violation: {user_role} cannot use {tool_name}")
@@ -396,12 +446,14 @@ def main():
                             continue
 
                         # 3. FIREWALL & FRAUD ENGINE CHECK
-                        decision = gw.check(tool_name, args, agent="claude-desktop")
+                        decision = gw.check(tool_name, tool_args, agent="claude-desktop")
                         
-                        # Apply Fraud Detection Engine analysis
+                        # Apply Fraud Detection Engine analysis (with risk deduplication)
                         fraud_blocked, final_action, final_reason, final_severity = fraud_engine.analyze(
                             agent="claude-desktop",
                             decision=decision,
+                            tool_name=tool_name,
+                            tool_args=tool_args,
                             user_id=user_id
                         )
 
@@ -415,7 +467,7 @@ def main():
                         learning_allowed = False
                         if args.learning and decision.blocked:
                             log(f"📚 Learning mode: Logging blocked tool '{tool_name}'")
-                            log_discovery(tool_name, args, "claude-desktop")
+                            log_discovery(tool_name, tool_args, "claude-desktop")
                             learning_allowed = True
                         dashboard_state.add_event({
                             "action": decision.action.value if hasattr(decision.action, 'value') else str(decision.action),
@@ -448,7 +500,7 @@ def main():
                             sys.stdout.flush()
                             continue
 
-                        params["arguments"] = args
+                        params["arguments"] = tool_args
                         data["params"] = params
                         line = json.dumps(data)
 

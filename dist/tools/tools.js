@@ -5,59 +5,182 @@ import path from "node:path";
 import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+/* -----------------------------
+   Resolve userId
+----------------------------- */
+async function resolveUserId(kc, userId, username) {
+    if (userId)
+        return userId;
+    if (!username) {
+        throw new Error("Provide either userId or username");
+    }
+    const users = await kc.users.find({
+        search: username,
+        max: 20
+    });
+    const user = users.find((u) => (u.username || "").toLowerCase() === username.toLowerCase());
+    if (!user) {
+        throw new Error(`User '${username}' not found`);
+    }
+    return user.id;
+}
+/* -----------------------------
+   Register tools
+----------------------------- */
 export function registerTools(server) {
-    // Helper to resolve ID from username
-    const resolveUserId = async (kc, userId, username) => {
-        if (userId)
-            return userId;
-        if (username) {
-            const users = await kc.users.find({ username: username, exact: true });
-            if (users.length > 0 && users[0].id) {
-                return users[0].id;
+    /* -----------------------------
+       FILESYSTEM TOOLS (Protected by Bridge Firewall)
+    ----------------------------- */
+    server.tool("read_file", {
+        path: z.string().describe("Path to the file to read")
+    }, async ({ path: filePath }) => {
+        try {
+            console.log(`🔍 READ_FILE CALLED for: ${filePath}`);
+            // Standard reading - the bridge will intercept and block if unauthorized
+            if (!fs.existsSync(filePath)) {
+                return { content: [{ type: "text", text: `Error: File not found: ${filePath}` }] };
             }
-            throw new Error(`User '${username}' not found.`);
+            const content = fs.readFileSync(filePath, "utf-8");
+            return { content: [{ type: "text", text: content }] };
         }
-        throw new Error("You must provide either 'userId' or 'username'.");
-    };
-    // Tool 1: Get User Events
-    server.tool("keycloak_get_user_events", {
-        userId: z.string().optional().describe("Filter by specific User ID"),
-        username: z.string().optional().describe("Filter by Username"),
-        limit: z.number().optional().default(50).describe("Number of events to fetch"),
-    }, async ({ userId, username, limit }) => {
-        const kc = await getKcClient();
-        const targetId = (userId || username) ? await resolveUserId(kc, userId, username) : undefined;
-        const realm = process.env.KEYCLOAK_REALM || "master";
-        const events = await kc.realms.findEvents({ realm, user: targetId, max: limit });
-        const simplifiedEvents = events.map((e) => ({
-            time: new Date(e.time || 0).toISOString(),
-            type: e.type,
-            ipAddress: e.ipAddress,
-            userId: e.userId,
-        }));
-        return { content: [{ type: "text", text: JSON.stringify(simplifiedEvents, null, 2) }] };
+        catch (err) {
+            return { content: [{ type: "text", text: `Read error: ${err.message}` }] };
+        }
     });
-    // Tool 2: List User Sessions
+    server.tool("list_directory", {
+        path: z.string().describe("Path to the directory to list")
+    }, async ({ path: dirPath }) => {
+        try {
+            console.log(`🔍 LIST_DIRECTORY CALLED for: ${dirPath}`);
+            if (!fs.existsSync(dirPath)) {
+                return { content: [{ type: "text", text: `Error: Directory not found: ${dirPath}` }] };
+            }
+            const files = fs.readdirSync(dirPath);
+            return { content: [{ type: "text", text: files.join("\n") }] };
+        }
+        catch (err) {
+            return { content: [{ type: "text", text: `List error: ${err.message}` }] };
+        }
+    });
+    server.tool("write_file", {
+        path: z.string().describe("Path to write to"),
+        content: z.string().describe("Content to write")
+    }, async ({ path: filePath, content }) => {
+        try {
+            console.log(`🔍 WRITE_FILE CALLED for: ${filePath}`);
+            fs.writeFileSync(filePath, content);
+            return { content: [{ type: "text", text: `✅ File written successfully to ${filePath}` }] };
+        }
+        catch (err) {
+            return { content: [{ type: "text", text: `Write error: ${err.message}` }] };
+        }
+    });
+    /* -----------------------------
+       LIST ALL USERS
+    ----------------------------- */
+    server.tool("keycloak_list_users", {
+        max: z.number().optional().default(20),
+    }, async (params) => {
+        try {
+            console.log("🔍 LIST ALL USERS CALLED");
+            const kc = await getKcClient();
+            const users = await kc.users.find({ max: params.max });
+            return {
+                content: [{ type: "text", text: JSON.stringify(users || [], null, 2) }]
+            };
+        }
+        catch (err) {
+            console.error("LIST USERS ERROR:", err);
+            return {
+                content: [{ type: "text", text: `List users error: ${err.message}` }]
+            };
+        }
+    });
+    /* -----------------------------
+       LIST USER SESSIONS
+    ----------------------------- */
     server.tool("keycloak_list_user_sessions", {
-        userId: z.string().optional(),
         username: z.string().optional(),
-    }, async ({ userId, username }) => {
-        const kc = await getKcClient();
-        const targetId = await resolveUserId(kc, userId, username);
-        const sessions = await kc.users.listSessions({ id: targetId });
-        return { content: [{ type: "text", text: JSON.stringify(sessions, null, 2) }] };
+        userId: z.string().optional()
+    }, async (params) => {
+        try {
+            console.log("🔍 LIST SESSIONS CALLED");
+            const kc = await getKcClient();
+            const targetId = await resolveUserId(kc, params.userId, params.username);
+            const sessions = await kc.users.listSessions({ id: targetId });
+            return {
+                content: [{ type: "text", text: JSON.stringify(sessions || [], null, 2) }]
+            };
+        }
+        catch (err) {
+            console.error("SESSION ERROR:", err);
+            return {
+                content: [{ type: "text", text: `Session error: ${err.message}` }]
+            };
+        }
     });
-    // Tool 3: Revoke User Sessions
+    /* -----------------------------
+       REVOKE USER SESSIONS
+       ADMIN ONLY
+    ----------------------------- */
     server.tool("keycloak_revoke_user_sessions", {
-        userId: z.string().optional(),
         username: z.string().optional(),
-    }, async ({ userId, username }) => {
-        const kc = await getKcClient();
-        const targetId = await resolveUserId(kc, userId, username);
-        await kc.users.logout({ id: targetId });
-        return { content: [{ type: "text", text: `Revoked sessions for ${targetId}` }] };
+        userId: z.string().optional()
+    }, async (params) => {
+        try {
+            console.log("🔍 REVOKE CALLED");
+            const role = process.env.RUNTIME_ROLE || "analyst";
+            if (role !== "admin") {
+                return {
+                    content: [{ type: "text", text: "❌ Only admin can revoke sessions" }]
+                };
+            }
+            const kc = await getKcClient();
+            const targetId = await resolveUserId(kc, params.userId, params.username);
+            await kc.users.logout({ id: targetId });
+            return {
+                content: [{ type: "text", text: `✅ Sessions revoked for ${params.username || targetId}` }]
+            };
+        }
+        catch (err) {
+            console.error("REVOKE ERROR:", err);
+            return {
+                content: [{ type: "text", text: `❌ Revoke failed: ${err.message}` }]
+            };
+        }
     });
-    // Tool 4: Security Report
+    /* -----------------------------
+       GET USER EVENTS
+    ----------------------------- */
+    server.tool("keycloak_get_user_events", {
+        username: z.string().optional(),
+        userId: z.string().optional(),
+        limit: z.number().optional().default(20)
+    }, async (params) => {
+        try {
+            console.log("🔍 EVENTS CALLED");
+            const kc = await getKcClient();
+            const targetId = await resolveUserId(kc, params.userId, params.username);
+            const realm = process.env.KEYCLOAK_REALM || "runtime-shield";
+            const events = await kc.realms.findEvents({
+                realm,
+                user: targetId,
+                max: params.limit
+            });
+            return {
+                content: [{ type: "text", text: JSON.stringify(events || [], null, 2) }]
+            };
+        }
+        catch (err) {
+            console.error("EVENT ERROR:", err);
+            return {
+                content: [{ type: "text", text: `Event error: ${err.message}` }]
+            };
+        }
+    });
+    /* -----------------------------
+       SECURITY REPORT
+    ----------------------------- */
     server.tool("keycloak_security_report", {}, async () => {
         const projectRoot = path.resolve(__dirname, "../../");
         const logPath = path.join(projectRoot, "bridge.log");
@@ -82,7 +205,9 @@ export function registerTools(server) {
         ].join("\n");
         return { content: [{ type: "text", text: report }] };
     });
-    // Tool 5: Generate Policy (from Learning Mode)
+    /* -----------------------------
+       GENERATE POLICY
+    ----------------------------- */
     server.tool("keycloak_generate_policy", {}, async () => {
         const projectRoot = path.resolve(__dirname, "../../");
         const discoveryPath = path.join(projectRoot, "discovery.log");
@@ -103,7 +228,9 @@ export function registerTools(server) {
         ].join("\n");
         return { content: [{ type: "text", text: output }] };
     });
-    // Tool 6: Quarantine User (The Panic Button)
+    /* -----------------------------
+       QUARANTINE USER
+    ----------------------------- */
     server.tool("keycloak_quarantine_user", {
         userId: z.string().optional(),
         username: z.string().optional(),
@@ -111,9 +238,7 @@ export function registerTools(server) {
     }, async ({ userId, username, reason }) => {
         const kc = await getKcClient();
         const targetId = await resolveUserId(kc, userId, username);
-        // 1. Force Logout in Keycloak
         await kc.users.logout({ id: targetId });
-        // 2. Add to dynamic_blocks in mcp-firewall.yaml
         const projectRoot = path.resolve(__dirname, "../../");
         const configPath = path.join(projectRoot, "mcp-firewall.yaml");
         try {

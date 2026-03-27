@@ -3,7 +3,7 @@
     "keycloak-server": {
       "command": "C:\\Python313\\python.exe",
       "args": [
-        "c:\\Users\\kavya\\OneDrive\\Desktop\\keycloak-mcp-server\\bridge.py"
+        " (path to )bridge.py"
       ],
       "env": {
         "PYTHONUTF8": "1"

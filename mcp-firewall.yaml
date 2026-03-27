@@ -31,6 +31,13 @@ dynamic_blocks: []
 
 # General Rules (evaluated in order: FIRST MATCH WINS)
 rules:
+  # 0. Redact PII (Emails) from any response
+  - name: redact-emails
+    tool: "*"
+    action: redact
+    match:
+      response:
+        contains: "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"
   # 1. Block directory traversal patterns (using globs)
   - name: block-traversal
     tool: "read_file|list_directory|write_file"
@@ -57,7 +64,13 @@ rules:
         path: "claude-desktop/**"
     action: allow
 
-  # 4. Default Allow for other tools (like Keycloak)
+  # 4. Block all other filesystem access (Defense in Depth)
+  - name: block-unauthorized-fs
+    tool: "read_file|list_directory|write_file"
+    action: deny
+    message: "Security violation: Unauthorized filesystem access attempt."
+
+  # 5. Default Allow for other tools (like Keycloak)
   - name: allow-keycloak-tools
     tool: "keycloak_*"
     action: allow
