@@ -1066,3 +1066,323 @@ ername"}]},"jsonrpc":"2.0","id":2}
 [17:00:05] 📩 Incoming MCP message: notifications/initialized
 [17:00:05] 📩 Incoming MCP message: tools/list
 [17:00:05] 📤 Outgoing MCP message from node: {"result":{"tools":[{"name":"read_file","inputSchema":{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"path":{"type":"string","description":"Path to the file to read
+
+--- Secure Bridge Session Start: 2026-03-30 15:27:29 ---
+[15:27:29] 🪪 SPIFFE integration enabled (startup validation mode).
+[15:27:29] 🪪 Bridge SPIFFE ID: spiffe://runtime-shield/bridge
+[15:27:29] 🪪 Expected MCP Server SPIFFE ID: spiffe://runtime-shield/keycloak-mcp
+[15:27:29] ⚠️ SPIFFE_SVID_PATH not configured. Continuing without local SVID file validation.
+[15:27:29] ⚠️ SPIFFE_BUNDLE_PATH not configured. Continuing without bundle file validation.
+[15:27:29] ⚠️ Current transport is stdio, so this is not full mTLS SPIFFE authentication.
+[15:27:29] ENV CHECK → RUNTIME_ROLE = admin
+[15:27:29] Starting Secure Bridge. Python: C:\Python313\python.exe
+[15:27:29] 🔐 Default runtime role: admin
+[15:27:30] ✅ Security Gateway initialized
+[15:27:30] 🕵️‍♂️ PROTECTION MODE ACTIVE: Fraud Engine will enforce risk limits
+[15:27:30] 📊 Dashboard active at http://127.0.0.1:9090
+[15:27:30] 🚀 Launching MCP Server: node c:\Users\kavya\OneDrive\Desktop\keycloak-mcp-server\dist\index.js
+[15:27:30] 📩 Incoming MCP message: initialize
+[15:27:30] ⌛ Bridge active and relaying...
+[15:27:31] 🟥 Node stderr: Keycloak MCP Server running on stdio
+[15:27:31] 📤 Outgoing MCP message from node: {"result":{"protocolVersion":"2025-11-25","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"keycloak-mcp-server","version":"1.0.0"}},"jsonrpc":"2.0","id":0}
+[15:27:31] 📩 Incoming MCP message: notifications/initialized
+[15:27:31] 📩 Incoming MCP message: tools/list
+[15:27:31] 📤 Outgoing MCP message from node: {"result":{"tools":[{"name":"read_file","inputSchema":{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"path":{"type":"string","description":"Path to the file to read
+[15:28:30] 📩 Incoming MCP message: tools/call
+[15:28:30] 🚫 Blocked: Security violation: Unauthorized filesystem access attempt.
+[15:28:35] 📩 Incoming MCP message: tools/call
+[15:28:35] 🚫 Blocked: Security violation: Unauthorized filesystem access attempt.
+[15:29:40] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 40 to 35
+[15:29:40] 📉 Fraud Engine: User unknown_user risk cooled down from 40 to 35
+[15:30:40] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 35 to 30
+[15:30:40] 📉 Fraud Engine: User unknown_user risk cooled down from 35 to 30
+[15:31:40] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 30 to 25
+[15:31:40] 📉 Fraud Engine: User unknown_user risk cooled down from 30 to 25
+[15:32:29] 📩 Incoming MCP message: tools/call
+[15:32:29] 🟥 Node stderr: 🔍 READ_FILE CALLED for: claude-desktop/log_export.csv
+[15:32:29] 📤 Outgoing MCP message from node: {"result":{"content":[{"type":"text","text":"Error: File not found: claude-desktop/log_export.csv"}]},"jsonrpc":"2.0","id":4}
+[15:32:36] 📩 Incoming MCP message: tools/call
+[15:32:36] 🚫 Blocked: Security violation: Unauthorized filesystem access attempt.
+[15:32:39] 📩 Incoming MCP message: tools/call
+[15:32:39] 🚫 Blocked: Fraud Engine Block: Risk Score (65) exceeded threshold (50).
+[15:32:43] 📩 Incoming MCP message: tools/call
+[15:32:43] 🚫 Blocked: Fraud Engine Block: Risk Score (85) exceeded threshold (50).
+[15:33:50] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 85 to 80
+[15:33:50] 📉 Fraud Engine: User unknown_user risk cooled down from 85 to 80
+[15:34:50] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 80 to 75
+[15:34:50] 📉 Fraud Engine: User unknown_user risk cooled down from 80 to 75
+[15:35:50] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 75 to 70
+[15:35:50] 📉 Fraud Engine: User unknown_user risk cooled down from 75 to 70
+[15:36:50] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 70 to 65
+[15:36:50] 📉 Fraud Engine: User unknown_user risk cooled down from 70 to 65
+[15:37:50] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 65 to 60
+[15:37:50] 📉 Fraud Engine: User unknown_user risk cooled down from 65 to 60
+[15:38:50] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 60 to 55
+[15:38:50] 📉 Fraud Engine: User unknown_user risk cooled down from 60 to 55
+
+--- Secure Bridge Session Start: 2026-03-30 15:45:37 ---
+[15:45:37] 🪪 SPIFFE integration enabled (startup validation mode).
+[15:45:37] 🪪 Bridge SPIFFE ID: spiffe://runtime-shield/bridge
+[15:45:37] 🪪 Expected MCP Server SPIFFE ID: spiffe://runtime-shield/keycloak-mcp
+[15:45:37] ⚠️ SPIFFE_SVID_PATH not configured. Continuing without local SVID file validation.
+[15:45:37] ⚠️ SPIFFE_BUNDLE_PATH not configured. Continuing without bundle file validation.
+[15:45:37] ⚠️ Current transport is stdio, so this is not full mTLS SPIFFE authentication.
+[15:45:37] ENV CHECK → RUNTIME_ROLE = admin
+[15:45:37] Starting Secure Bridge. Python: C:\Python313\python.exe
+[15:45:37] 🔐 Default runtime role: admin
+[15:45:37] ✅ Security Gateway initialized
+[15:45:37] 🕵️‍♂️ PROTECTION MODE ACTIVE: Fraud Engine will enforce risk limits
+[15:45:37] 📊 Dashboard active at http://127.0.0.1:9090
+[15:45:37] 🚀 Launching MCP Server: node c:\Users\kavya\OneDrive\Desktop\keycloak-mcp-server\dist\index.js
+[15:45:37] 📩 Incoming MCP message: initialize
+[15:45:37] ⌛ Bridge active and relaying...
+[15:45:38] 🟥 Node stderr: Keycloak MCP Server running on stdio
+[15:45:38] 📤 Outgoing MCP message from node: {"result":{"protocolVersion":"2025-11-25","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"Secure-Runtime-Shield","version":"1.0.0"}},"jsonrpc":"2.0","id":0}
+[15:45:38] 📩 Incoming MCP message: notifications/initialized
+[15:45:38] 📩 Incoming MCP message: tools/list
+[15:45:38] 📤 Outgoing MCP message from node: {"result":{"tools":[{"name":"read_file","inputSchema":{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"path":{"type":"string","description":"Path to the file to read
+
+--- Secure Bridge Session Start: 2026-03-30 15:50:44 ---
+[15:50:44] 🪪 SPIFFE integration enabled (startup validation mode).
+[15:50:44] 🪪 Bridge SPIFFE ID: spiffe://runtime-shield/bridge
+[15:50:44] 🪪 Expected MCP Server SPIFFE ID: spiffe://runtime-shield/keycloak-mcp
+[15:50:44] ⚠️ SPIFFE_SVID_PATH not configured. Continuing without local SVID file validation.
+[15:50:44] ⚠️ SPIFFE_BUNDLE_PATH not configured. Continuing without bundle file validation.
+[15:50:44] ⚠️ Current transport is stdio, so this is not full mTLS SPIFFE authentication.
+[15:50:44] ENV CHECK → RUNTIME_ROLE = admin
+[15:50:44] Starting Secure Bridge. Python: C:\Python313\python.exe
+[15:50:44] 🔐 Default runtime role: admin
+[15:50:44] ✅ Security Gateway initialized
+[15:50:44] 🕵️‍♂️ PROTECTION MODE ACTIVE: Fraud Engine will enforce risk limits
+[15:50:44] 📊 Dashboard active at http://127.0.0.1:9090
+[15:50:44] 🚀 Launching MCP Server: node c:\Users\kavya\OneDrive\Desktop\keycloak-mcp-server\dist\index.js
+[15:50:44] ⌛ Bridge active and relaying...
+[15:50:45] 📩 Incoming MCP message: initialize
+[15:50:45] 🟥 Node stderr: Keycloak MCP Server running on stdio
+[15:50:45] 📤 Outgoing MCP message from node: {"result":{"protocolVersion":"2025-11-25","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"Secure-Runtime-Shield","version":"1.0.0"}},"jsonrpc":"2.0","id":0}
+[15:50:47] 📩 Incoming MCP message: notifications/initialized
+[15:50:47] 📩 Incoming MCP message: tools/list
+[15:50:47] 📤 Outgoing MCP message from node: {"result":{"tools":[{"name":"read_file","inputSchema":{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"path":{"type":"string","description":"Path to the file to read
+
+--- Secure Bridge Session Start: 2026-03-30 16:05:09 ---
+[16:05:09] 🪪 SPIFFE integration enabled (startup validation mode).
+[16:05:09] 🪪 Bridge SPIFFE ID: spiffe://runtime-shield/bridge
+[16:05:09] 🪪 Expected MCP Server SPIFFE ID: spiffe://runtime-shield/keycloak-mcp
+[16:05:09] ⚠️ SPIFFE_SVID_PATH not configured. Continuing without local SVID file validation.
+[16:05:09] ⚠️ SPIFFE_BUNDLE_PATH not configured. Continuing without bundle file validation.
+[16:05:09] ⚠️ Current transport is stdio, so this is not full mTLS SPIFFE authentication.
+[16:05:09] ENV CHECK → RUNTIME_ROLE = admin
+[16:05:09] Starting Secure Bridge. Python: C:\Python313\python.exe
+[16:05:09] 🔐 Default runtime role: admin
+[16:05:09] ✅ Security Gateway initialized
+[16:05:09] 🕵️‍♂️ PROTECTION MODE ACTIVE: Fraud Engine will enforce risk limits
+[16:05:09] 📊 Dashboard active at http://127.0.0.1:9090
+[16:05:09] 🚀 Launching MCP Server: node c:\Users\kavya\OneDrive\Desktop\keycloak-mcp-server\dist\index.js
+[16:05:09] ⌛ Bridge active and relaying...
+[16:05:10] 🟥 Node stderr: Keycloak MCP Server running on stdio
+[16:05:10] 📩 Incoming MCP message: initialize
+[16:05:10] 📤 Outgoing MCP message from node: {"result":{"protocolVersion":"2025-11-25","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"Secure-Runtime-Shield","version":"1.0.0"}},"jsonrpc":"2.0","id":0}
+[16:05:10] 📩 Incoming MCP message: notifications/initialized
+[16:05:10] 📩 Incoming MCP message: tools/list
+[16:05:11] 📤 Outgoing MCP message from node: {"result":{"tools":[{"name":"read_file","inputSchema":{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"path":{"type":"string","description":"Path to the file to read
+
+--- Secure Bridge Session Start: 2026-03-30 16:39:04 ---
+[16:39:04] 🪪 SPIFFE integration enabled (startup validation mode).
+[16:39:04] 🪪 Bridge SPIFFE ID: spiffe://runtime-shield/bridge
+[16:39:04] 🪪 Expected MCP Server SPIFFE ID: spiffe://runtime-shield/keycloak-mcp
+[16:39:04] ⚠️ SPIFFE_SVID_PATH not configured. Continuing without local SVID file validation.
+[16:39:04] ⚠️ SPIFFE_BUNDLE_PATH not configured. Continuing without bundle file validation.
+[16:39:04] ⚠️ Current transport is stdio, so this is not full mTLS SPIFFE authentication.
+[16:39:04] ENV CHECK → RUNTIME_ROLE = admin
+[16:39:04] Starting Secure Bridge. Python: C:\Python313\python.exe
+[16:39:04] 🔐 Default runtime role: admin
+[16:39:04] ✅ Security Gateway initialized
+[16:39:04] 🕵️‍♂️ PROTECTION MODE ACTIVE: Fraud Engine will enforce risk limits
+[16:39:04] 📊 Dashboard active at http://127.0.0.1:9090
+[16:39:04] 🚀 Launching MCP Server: node c:\Users\kavya\OneDrive\Desktop\keycloak-mcp-server\dist\index.js
+[16:39:04] 📩 Incoming MCP message: initialize
+[16:39:04] ⌛ Bridge active and relaying...
+[16:39:05] 🟥 Node stderr: Keycloak MCP Server running on stdio
+[16:39:05] 📤 Outgoing MCP message from node: {"result":{"protocolVersion":"2025-11-25","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"Secure-Runtime-Shield","version":"1.0.0"}},"jsonrpc":"2.0","id":0}
+[16:39:05] 📩 Incoming MCP message: notifications/initialized
+[16:39:05] 📩 Incoming MCP message: tools/list
+[16:39:05] 📤 Outgoing MCP message from node: {"result":{"tools":[{"name":"read_file","inputSchema":{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"path":{"type":"string","description":"Path to the file to read
+[16:45:55] 📩 Incoming MCP message: tools/call
+[16:45:55] 🚫 Blocked: Security violation: Unauthorized filesystem access attempt.
+[16:46:04] 📩 Incoming MCP message: tools/call
+[16:46:04] 🚫 Blocked: Security violation: Unauthorized filesystem access attempt.
+[16:46:08] 📩 Incoming MCP message: tools/call
+[16:46:08] 🚫 Blocked: Fraud Engine Block: Risk Score (60) exceeded threshold (50).
+[16:47:14] 📉 Fraud Engine: User unknown_user risk cooled down from 60 to 55
+[16:47:14] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 60 to 55
+[16:48:14] 📉 Fraud Engine: User unknown_user risk cooled down from 55 to 50
+[16:48:14] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 55 to 50
+[16:49:14] 📉 Fraud Engine: User unknown_user risk cooled down from 50 to 45
+[16:49:14] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 50 to 45
+[16:50:14] 📉 Fraud Engine: User unknown_user risk cooled down from 45 to 40
+[16:50:14] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 45 to 40
+[16:51:14] 📉 Fraud Engine: User unknown_user risk cooled down from 40 to 35
+[16:51:14] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 40 to 35
+[16:52:14] 📉 Fraud Engine: User unknown_user risk cooled down from 35 to 30
+[16:52:14] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 35 to 30
+[16:53:14] 📉 Fraud Engine: User unknown_user risk cooled down from 30 to 25
+[16:53:14] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 30 to 25
+[16:54:14] 📉 Fraud Engine: User unknown_user risk cooled down from 25 to 20
+[16:54:14] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 25 to 20
+[16:55:14] 📉 Fraud Engine: User unknown_user risk cooled down from 20 to 15
+[16:55:14] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 20 to 15
+[16:56:14] 📉 Fraud Engine: User unknown_user risk cooled down from 15 to 10
+[16:56:14] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 15 to 10
+[16:57:14] 📉 Fraud Engine: User unknown_user risk cooled down from 10 to 5
+[16:57:14] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 10 to 5
+[16:58:14] 📉 Fraud Engine: User unknown_user risk cooled down from 5 to 0
+[16:58:14] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 5 to 0
+
+--- Secure Bridge Session Start: 2026-03-31 11:24:23 ---
+[11:24:23] 🪪 SPIFFE integration enabled (startup validation mode).
+[11:24:23] 🪪 Bridge SPIFFE ID: spiffe://runtime-shield/bridge
+[11:24:23] 🪪 Expected MCP Server SPIFFE ID: spiffe://runtime-shield/keycloak-mcp
+[11:24:23] ⚠️ SPIFFE_SVID_PATH not configured. Continuing without local SVID file validation.
+[11:24:23] ⚠️ SPIFFE_BUNDLE_PATH not configured. Continuing without bundle file validation.
+[11:24:23] ⚠️ Current transport is stdio, so this is not full mTLS SPIFFE authentication.
+[11:24:23] ENV CHECK → RUNTIME_ROLE = admin
+[11:24:23] Starting Secure Bridge. Python: C:\Python313\python.exe
+[11:24:23] 🔐 Default runtime role: admin
+[11:24:23] ✅ Security Gateway initialized
+[11:24:23] 🕵️‍♂️ PROTECTION MODE ACTIVE: Fraud Engine will enforce risk limits
+[11:24:23] 📊 Dashboard active at http://127.0.0.1:9090
+[11:24:23] 🚀 Launching MCP Server: node c:\Users\kavya\OneDrive\Desktop\keycloak-mcp-server\dist\index.js
+[11:24:23] 📩 Incoming MCP message: initialize
+[11:24:23] ⌛ Bridge active and relaying...
+[11:24:28] 🟥 Node stderr: Keycloak MCP Server running on stdio
+[11:24:28] 📤 Outgoing MCP message from node: {"result":{"protocolVersion":"2025-11-25","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"Secure-Runtime-Shield","version":"1.0.0"}},"jsonrpc":"2.0","id":0}
+[11:24:28] 📩 Incoming MCP message: notifications/initialized
+[11:24:28] 📩 Incoming MCP message: tools/list
+[11:24:28] 📤 Outgoing MCP message from node: {"result":{"tools":[{"name":"read_file","inputSchema":{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"path":{"type":"string","description":"Path to the file to read
+
+--- Secure Bridge Session Start: 2026-03-31 12:57:24 ---
+[12:57:24] 🪪 SPIFFE integration enabled (startup validation mode).
+[12:57:24] 🪪 Bridge SPIFFE ID: spiffe://runtime-shield/bridge
+[12:57:24] 🪪 Expected MCP Server SPIFFE ID: spiffe://runtime-shield/secure-runtime-shield
+[12:57:24] ⚠️ SPIFFE_SVID_PATH not configured. Continuing without local SVID file validation.
+[12:57:24] ⚠️ SPIFFE_BUNDLE_PATH not configured. Continuing without bundle file validation.
+[12:57:24] ⚠️ Current transport is stdio, so this is not full mTLS SPIFFE authentication.
+[12:57:24] ENV CHECK → RUNTIME_ROLE = admin
+[12:57:24] Starting Secure Bridge. Python: C:\Python313\python.exe
+[12:57:24] 🔐 Default runtime role: admin
+[12:57:24] ✅ Security Gateway initialized
+[12:57:24] 🕵️‍♂️ PROTECTION MODE ACTIVE: Fraud Engine will enforce risk limits
+[12:57:24] 📊 Dashboard active at http://127.0.0.1:9090
+[12:57:24] 🚀 Launching MCP Server: node c:\Users\kavya\OneDrive\Desktop\keycloak-mcp-server\dist\index.js
+[12:57:24] 📩 Incoming MCP message: initialize
+[12:57:24] ⌛ Bridge active and relaying...
+[12:57:26] 🟥 Node stderr: Keycloak MCP Server running on stdio
+[12:57:26] 📤 Outgoing MCP message from node: {"result":{"protocolVersion":"2025-11-25","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"Secure-Runtime-Shield","version":"1.0.0"}},"jsonrpc":"2.0","id":0}
+[12:57:26] 📩 Incoming MCP message: notifications/initialized
+[12:57:26] 📩 Incoming MCP message: tools/list
+[12:57:26] 📤 Outgoing MCP message from node: {"result":{"tools":[{"name":"read_file","inputSchema":{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"path":{"type":"string","description":"Path to the file to read
+[13:03:40] 📩 Incoming MCP message: tools/call
+[13:03:40] 🚫 Blocked: Access denied: The 'admin/' directory is off-limits.
+[13:04:24] 📩 Incoming MCP message: tools/call
+[13:04:24] 🚫 Blocked: Security violation: Unauthorized filesystem access attempt.
+[13:04:33] 📩 Incoming MCP message: tools/call
+[13:04:33] 🚫 Blocked: Fraud Engine Block: Risk Score (60) exceeded threshold (50).
+[13:05:34] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 60 to 55
+[13:05:34] 📉 Fraud Engine: User unknown_user risk cooled down from 60 to 55
+[13:06:34] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 55 to 50
+[13:06:34] 📉 Fraud Engine: User unknown_user risk cooled down from 55 to 50
+[13:07:34] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 50 to 45
+[13:07:34] 📉 Fraud Engine: User unknown_user risk cooled down from 50 to 45
+[13:08:34] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 45 to 40
+[13:08:34] 📉 Fraud Engine: User unknown_user risk cooled down from 45 to 40
+
+--- Secure Bridge Session Start: 2026-03-31 13:09:26 ---
+[13:09:26] 🪪 SPIFFE integration enabled (startup validation mode).
+[13:09:26] 🪪 Bridge SPIFFE ID: spiffe://runtime-shield/bridge
+[13:09:26] 🪪 Expected MCP Server SPIFFE ID: spiffe://runtime-shield/secure-runtime-shield
+[13:09:26] ⚠️ SPIFFE_SVID_PATH not configured. Continuing without local SVID file validation.
+[13:09:26] ⚠️ SPIFFE_BUNDLE_PATH not configured. Continuing without bundle file validation.
+[13:09:26] ⚠️ Current transport is stdio, so this is not full mTLS SPIFFE authentication.
+[13:09:26] ENV CHECK → RUNTIME_ROLE = admin
+[13:09:26] Starting Secure Bridge. Python: C:\Python313\python.exe
+[13:09:26] 🔐 Default runtime role: admin
+[13:09:26] ✅ Security Gateway initialized
+[13:09:26] 🕵️‍♂️ PROTECTION MODE ACTIVE: Fraud Engine will enforce risk limits
+[13:09:26] 📊 Dashboard active at http://127.0.0.1:9090
+[13:09:26] 🚀 Launching MCP Server: node c:\Users\kavya\OneDrive\Desktop\keycloak-mcp-server\dist\index.js
+[13:09:26] ⌛ Bridge active and relaying...
+[13:09:27] 📩 Incoming MCP message: initialize
+[13:09:28] 🟥 Node stderr: Keycloak MCP Server running on stdio
+[13:09:28] 📤 Outgoing MCP message from node: {"result":{"protocolVersion":"2025-11-25","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"Secure-Runtime-Shield","version":"1.0.0"}},"jsonrpc":"2.0","id":0}
+[13:09:28] 📩 Incoming MCP message: notifications/initialized
+[13:09:28] 📩 Incoming MCP message: tools/list
+[13:09:28] 📤 Outgoing MCP message from node: {"result":{"tools":[{"name":"read_file","inputSchema":{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"path":{"type":"string","description":"Path to the file to read
+[13:09:46] 📩 Incoming MCP message: tools/call
+[13:09:46] 🚫 Blocked: Security violation: Unauthorized filesystem access attempt.
+[13:09:51] 📩 Incoming MCP message: tools/call
+[13:09:51] 🚫 Blocked: Security violation: Unauthorized filesystem access attempt.
+[13:10:56] 📉 Fraud Engine: User unknown_user risk cooled down from 40 to 35
+[13:10:56] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 40 to 35
+[13:11:56] 📉 Fraud Engine: User unknown_user risk cooled down from 35 to 30
+[13:11:56] 📉 Fraud Engine: Agent claude-desktop risk cooled down from 35 to 30
+
+--- Secure Bridge Session Start: 2026-03-31 13:12:41 ---
+[13:12:41] 🪪 SPIFFE integration enabled (startup validation mode).
+[13:12:41] 🪪 Bridge SPIFFE ID: spiffe://runtime-shield/bridge
+[13:12:41] 🪪 Expected MCP Server SPIFFE ID: spiffe://runtime-shield/secure-runtime-shield
+[13:12:41] ⚠️ SPIFFE_SVID_PATH not configured. Continuing without local SVID file validation.
+[13:12:41] ⚠️ SPIFFE_BUNDLE_PATH not configured. Continuing without bundle file validation.
+[13:12:41] ⚠️ Current transport is stdio, so this is not full mTLS SPIFFE authentication.
+[13:12:41] ENV CHECK → RUNTIME_ROLE = admin
+[13:12:41] Starting Secure Bridge. Python: C:\Python313\python.exe
+[13:12:41] 🔐 Default runtime role: admin
+[13:12:41] ✅ Security Gateway initialized
+[13:12:41] 🕵️‍♂️ PROTECTION MODE ACTIVE: Fraud Engine will enforce risk limits
+[13:12:41] 📊 Dashboard active at http://127.0.0.1:9090
+[13:12:41] 🚀 Launching MCP Server: node c:\Users\kavya\OneDrive\Desktop\keycloak-mcp-server\dist\index.js
+[13:12:41] 📩 Incoming MCP message: initialize
+[13:12:41] ⌛ Bridge active and relaying...
+[13:12:42] 🟥 Node stderr: Keycloak MCP Server running on stdio
+[13:12:42] 📤 Outgoing MCP message from node: {"result":{"protocolVersion":"2025-11-25","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"Secure-Runtime-Shield","version":"1.0.0"}},"jsonrpc":"2.0","id":0}
+[13:12:42] 📩 Incoming MCP message: notifications/initialized
+[13:12:42] 📩 Incoming MCP message: tools/list
+[13:12:42] 📤 Outgoing MCP message from node: {"result":{"tools":[{"name":"read_file","inputSchema":{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","properties":{"path":{"type":"string","description":"Path to the file to read
+[13:13:11] 📩 Incoming MCP message: tools/call
+[13:13:11] 🟥 Node stderr: 🔍 LIST_DIRECTORY CALLED for: secure-experiment-zone
+[13:13:11] 📤 Outgoing MCP message from node: {"result":{"content":[{"type":"text","text":"claude-desktop\ngenerate_certs.py\nsearch_events.py\ntest_sandbox.txt"}]},"jsonrpc":"2.0","id":2}
+[13:15:27] 📩 Incoming MCP message: tools/call
+[13:15:27] 🟥 Node stderr: 🔍 LIST SESSIONS CALLED
+[13:15:27] 📤 Outgoing MCP message from node: {"result":{"content":[{"type":"text","text":"Session error: Provide either userId or username"}]},"jsonrpc":"2.0","id":3}
+[13:15:27] 🟥 Node stderr: at resolveUserId (file:///c:/Users/kavya/OneDrive/Desktop/keycloak-mcp-server/dist/tools/tools.js:15:15)
+[13:15:27] 🟥 Node stderr: at file:///c:/Users/kavya/OneDrive/Desktop/keycloak-mcp-server/dist/tools/tools.js:109:36
+[13:15:27] 🟥 Node stderr: at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+[13:15:27] 🟥 Node stderr: at async McpServer.executeToolHandler (file:///c:/Users/kavya/OneDrive/Desktop/keycloak-mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/mcp.js:233:20)
+[13:15:27] 🟥 Node stderr: at async file:///c:/Users/kavya/OneDrive/Desktop/keycloak-mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/mcp.js:126:32
+[13:15:27] 🟥 Node stderr: at async wrappedHandler (file:///c:/Users/kavya/OneDrive/Desktop/keycloak-mcp-server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js:125:32)
+[13:15:34] 📩 Incoming MCP message: tools/call
+[13:15:34] 🟥 Node stderr: 🔍 LIST ALL USERS CALLED
+[13:15:35] 📤 Outgoing MCP message from node: {"result":{"content":[{"type":"text","text":"[\n  {\n    \"id\": \"a099caa9-8d58-4881-9c73-1a616541072b\",\n    \"username\": \"admin\",\n    \"email\": \"koenigseggkavss@gmail.com\",\n    \"emailVeri
+[13:15:35] ✂️ FIREWALL REDACTED sensitive data (Manual Fallback)
+[13:15:49] 📩 Incoming MCP message: tools/call
+[13:15:49] 🟥 Node stderr: 🔍 LIST SESSIONS CALLED
+[13:15:49] 📤 Outgoing MCP message from node: {"result":{"content":[{"type":"text","text":"[\n  {\n    \"id\": \"pc95oNlzZNL76CckahLA-_Ci\",\n    \"username\": \"admin\",\n    \"userId\": \"a099caa9-8d58-4881-9c73-1a616541072b\",\n    \"ipAddress
+[13:15:53] 📩 Incoming MCP message: tools/call
+[13:15:53] 🟥 Node stderr: 🔍 LIST SESSIONS CALLED
+[13:15:53] 📤 Outgoing MCP message from node: {"result":{"content":[{"type":"text","text":"[]"}]},"jsonrpc":"2.0","id":6}
+[13:15:58] 📩 Incoming MCP message: tools/call
+[13:15:58] 🟥 Node stderr: 🔍 LIST SESSIONS CALLED
+[13:15:58] 📤 Outgoing MCP message from node: {"result":{"content":[{"type":"text","text":"[]"}]},"jsonrpc":"2.0","id":7}
+[13:16:10] 📩 Incoming MCP message: tools/call
+[13:16:10] 🟥 Node stderr: 🔍 LIST SESSIONS CALLED
+[13:16:10] 📤 Outgoing MCP message from node: {"result":{"content":[{"type":"text","text":"[]"}]},"jsonrpc":"2.0","id":8}
+[13:17:13] 📩 Incoming MCP message: tools/call
+[13:17:13] 🟥 Node stderr: 🔍 LIST_DIRECTORY CALLED for: secure-experiment-zone/claude-desktop
+[13:17:13] 📤 Outgoing MCP message from node: {"result":{"content":[{"type":"text","text":"log_export.csv"}]},"jsonrpc":"2.0","id":9}
+[13:17:24] 📩 Incoming MCP message: tools/call
+[13:17:24] 🟥 Node stderr: 🔍 READ_FILE CALLED for: secure-experiment-zone/claude-desktop/log_export.csv
+[13:17:24] 📤 Outgoing MCP message from node: {"result":{"content":[{"type":"text","text":"user_id,login_time,session_token\r\n101,2024-02-23,Bearer test-token-1234567890abcdef\r\n"}]},"jsonrpc":"2.0","id":10}
+[13:17:24] ✂️ FIREWALL REDACTED sensitive data
+[13:17:39] 📩 Incoming MCP message: tools/call
+[13:17:39] 🟥 Node stderr: 🔍 READ_FILE CALLED for: secure-experiment-zone/claude-desktop/log_export.csv
+[13:17:39] 📤 Outgoing MCP message from node: {"result":{"content":[{"type":"text","text":"user_id,login_time,session_token\r\n101,2024-02-23,Bearer test-token-1234567890abcdef\r\n"}]},"jsonrpc":"2.0","id":11}
+[13:17:39] ✂️ FIREWALL REDACTED sensitive data

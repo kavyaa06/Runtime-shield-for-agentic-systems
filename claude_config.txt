@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "keycloak-server": {
+    "Secure-Runtime-Shield": {
       "command": "C:\\Python313\\python.exe",
       "args": [
         " (path to )bridge.py"

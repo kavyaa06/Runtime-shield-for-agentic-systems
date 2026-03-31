@@ -61,7 +61,15 @@ rules:
     tool: "read_file|list_directory|write_file"
     match:
       arguments:
-        path: "claude-desktop/**"
+        path: "secure-experiment-zone/claude-desktop*"
+    action: allow
+
+  # 4. Allow access to the Secure Experiment Zone (Safe Agent Workspace)
+  - name: allow-experiment-zone-access
+    tool: "read_file|list_directory|write_file"
+    match:
+      arguments:
+        path: "secure-experiment-zone*"
     action: allow
 
   # 4. Block all other filesystem access (Defense in Depth)

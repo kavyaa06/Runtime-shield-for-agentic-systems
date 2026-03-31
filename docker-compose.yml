@@ -39,7 +39,8 @@ services:
     volumes:
       - ./spire/agent:/run/spire/config
       - ./spire/certs:/run/spire/certs:ro
-      - spire-agent-data:/opt/spire/data
+      - ./spire/agent/passwd:/etc/passwd:ro
+      - ./spire/agent/group:/etc/group:ro
     depends_on:
       - spire-server
     restart: always

@@ -12,19 +12,18 @@ from mcp_firewall.dashboard.server import start_dashboard
 from mcp_firewall.dashboard.app import state as dashboard_state
 from dotenv import load_dotenv
 
-# Ensure UTF-8 for Windows
-if sys.platform == "win32":
-    import codecs
-    sys.stdout.reconfigure(encoding='utf-8')
-    sys.stderr.reconfigure(encoding='utf-8')
-
-\
-
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(PROJECT_DIR, "mcp-firewall.yaml")
 DOTENV_PATH = os.path.join(PROJECT_DIR, ".env")
 LOG_PATH = os.path.join(PROJECT_DIR, "bridge.log")
 DISCOVERY_PATH = os.path.join(PROJECT_DIR, "discovery.log")
+
+# Force UTF-8 for ALL streams on Windows to prevent 'charmap' crashes
+if sys.platform == 'win32':
+    import io
+    sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 class FraudDetectionEngine:
     def __init__(self, learning_mode=False):
@@ -239,7 +238,7 @@ def get_spiffe_config():
     return {
         "enabled": os.getenv("SPIFFE_ENABLED", "false").lower() == "true",
         "bridge_id": os.getenv("SPIFFE_BRIDGE_ID", "spiffe://runtime-shield/bridge"),
-        "server_id": os.getenv("SPIFFE_SERVER_ID", "spiffe://runtime-shield/keycloak-mcp"),
+        "server_id": os.getenv("SPIFFE_SERVER_ID", "spiffe://runtime-shield/secure-runtime-shield"),
         "svid_path": os.getenv("SPIFFE_SVID_PATH", ""),
         "bundle_path": os.getenv("SPIFFE_BUNDLE_PATH", "")
     }
@@ -295,7 +294,7 @@ def get_allowed_spiffe_ids():
     """Parse allowed SPIFFE IDs from environment variable."""
     allowed_ids_str = os.getenv(
         "ALLOWED_SPIFFE_IDS",
-        "spiffe://runtime-shield/agent,spiffe://runtime-shield/dashboard,spiffe://runtime-shield/bridge"
+        "spiffe://runtime-shield/agent,spiffe://runtime-shield/dashboard,spiffe://runtime-shield/bridge,spiffe://runtime-shield/secure-runtime-shield"
     ).strip()
     
     # Handle both comma-separated and JSON array formats
@@ -316,7 +315,21 @@ ALLOWED_SPIFFE_IDS = get_allowed_spiffe_ids()
 def spiffe_allowed(spiffe_id: str) -> bool:
     if not spiffe_id:
         return False
-    return spiffe_id in ALLOWED_SPIFFE_IDS
+    
+    # Check exact match first
+    if spiffe_id in ALLOWED_SPIFFE_IDS:
+        return True
+    
+    # Support prefix matching for dynamic SVIDs (e.g. spiffe://runtime-shield/spire/agent/x509pop/*)
+    for allowed_pattern in ALLOWED_SPIFFE_IDS:
+        if "*" in allowed_pattern:
+            regex_pattern = re.escape(allowed_pattern).replace(r"\*", ".*")
+            if re.fullmatch(regex_pattern, spiffe_id):
+                return True
+        elif spiffe_id.startswith(allowed_pattern):
+            return True
+            
+    return False
 
 
 # =========================
@@ -331,7 +344,7 @@ def main():
 
     # Path to the node-based MCP server
     NODE_SERVER_PATH = os.path.join(PROJECT_DIR, "dist", "index.js")
-    WORKSPACE_DIR = os.path.join(PROJECT_DIR, "sandbox")
+    WORKSPACE_DIR = os.path.join(PROJECT_DIR, "secure-experiment-zone")
 
     if not os.path.exists(WORKSPACE_DIR):
         os.makedirs(WORKSPACE_DIR)
@@ -633,11 +646,18 @@ def main():
                 except Exception as e:
                     log(f"⚠️ Redaction error: {e}")
 
-                sys.stdout.write(line_str)
-                sys.stdout.flush()
+                try:
+                    sys.stdout.write(line_str)
+                    sys.stdout.flush()
+                except UnicodeEncodeError:
+                    # Fallback for Windows terminals failing on emojis
+                    sys.stdout.write(line_str.encode('ascii', 'backslashreplace').decode('ascii'))
+                    sys.stdout.flush()
 
         except Exception as e:
-            log(f"Output thread error: {e}")
+            log(f"🆘 ERROR: Output thread crashed: {e}")
+            # Don't let a single encoding error kill the whole relay
+            time.sleep(1) 
 
     # =========================
     # STDERR THREAD

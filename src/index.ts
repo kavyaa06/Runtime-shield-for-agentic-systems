@@ -22,7 +22,7 @@ if (!process.env.KEYCLOAK_URL) {
 
 // Create an MCP server instance
 const server = new McpServer({
-    name: "keycloak-mcp-server",
+    name: "Secure-Runtime-Shield",
     version: "1.0.0",
 });
 
